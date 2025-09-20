@@ -44,4 +44,4 @@ jobs:
             npm install
             npm run build
             pm2 restart vendure-server || pm2 start ./dist/index.js --name vendure-server
-            pm2 restart vendure-worker || pm2 start ./dist/index-worker.js --name
+            pm2 restart vendure-worker || pm2 start ./dist/index-worker.js --nameexit
