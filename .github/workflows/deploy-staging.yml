@@ -40,7 +40,11 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
             cd /home/vendure/webapps/vendure || exit 1
-            git pull origin staging
+            if [ ! -d .git ]; then
+              git clone git@github.com:neometaventures/bespokible-vendure.git .
+            else
+              git pull origin staging
+            fi            
             npm install
             npm run build
             pm2 restart vendure-server || pm2 start ./dist/index.js --name vendure-server
