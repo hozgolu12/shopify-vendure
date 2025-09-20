@@ -25,7 +25,7 @@ jobs:
       - name: Build Vendure app
         run: npm run build
 
-      # Optional: Run tests if any
+      # Optional: Run tests if needed
       #  name: Run tests
       #  run: npm test
 
