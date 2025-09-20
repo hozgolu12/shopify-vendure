@@ -1,0 +1,47 @@
+name: Deploy Vendure Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js v24.8.0
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24.8.0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Vendure app
+        run: npm run build
+
+      # Optional: Run tests if you have any
+      #- name: Run tests
+      #  run: npm test
+
+      - name: Deploy to Staging Server
+        env:
+          HOST: ${{ secrets.STAGING_HOST }}
+          USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            cd /home/vendure/webapps/vendure || exit 1
+            git pull origin staging
+            npm install
+            npm run build
+            pm2 restart vendure-server || pm2 start ./dist/index.js --name vendure-server
+            pm2 restart vendure-worker || pm2 start ./dist/index-worker.js --name
