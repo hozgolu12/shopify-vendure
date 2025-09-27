@@ -3,3 +3,8 @@ dist
 admin-ui
 static/assets
 static/email/test-emails
+
+
+vendure.sqlite
+backup
+.env.local
