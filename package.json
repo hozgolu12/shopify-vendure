@@ -14,15 +14,17 @@
   },
   "dependencies": {
     "@vendure/admin-ui-plugin": "3.4.2",
-    "@vendure/asset-server-plugin": "3.4.2",
+    "@vendure/asset-server-plugin": "^3.4.2",
     "@vendure/core": "3.4.2",
-    "@vendure/email-plugin": "3.4.2",
+    "@vendure/email-plugin": "^3.4.2",
     "@vendure/graphiql-plugin": "3.4.2",
     "dotenv": "17.2.2",
     "pg": "8.16.3"
   },
   "devDependencies": {
+    "@types/react": "19.1.15",
     "@vendure/cli": "3.4.2",
+    "@vendure/ui-devkit": "3.4.2",
     "concurrently": "9.2.1",
     "typescript": "5.8.2"
   }
