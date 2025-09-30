@@ -4,6 +4,7 @@ import {
   DefaultJobQueuePlugin,
   DefaultSearchPlugin,
   VendureConfig,
+  LanguageCode,
 } from "@vendure/core";
 import { defaultEmailHandlers, EmailPlugin } from "@vendure/email-plugin";
 import {
@@ -14,6 +15,9 @@ import { AdminUiPlugin } from "@vendure/admin-ui-plugin";
 import "dotenv/config";
 import path from "path";
 import { CustomerRelationPlugin } from "./plugins/customer-relation/customer-relation.plugin";
+import { measurementsSchema } from "./schema/customer/measurements.schema";
+import { productKitsSchema } from "./schema/channel/productKits.schema";
+import { orderKitsSchema } from "./schema/channel/orderKits.schema";
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
 const IS_DEV = process.env.APP_ENV === "dev";
@@ -80,36 +84,8 @@ export const config: VendureConfig = {
         type: "string",
       },
     ],
-    Channel: [
-      {
-        name: "productKits",
-        type: "struct",
-        list: true,
-        fields: [
-          { name: "id", type: "string" },
-          { name: "productKitName", type: "string" },
-          {
-            name: "productIds",
-            type: "string",
-            list: true,
-          },
-        ],
-      },
-      {
-        name: "orderKits",
-        type: "struct",
-        list: true,
-        fields: [
-          { name: "id", type: "string" },
-          { name: "orderKitName", type: "string" },
-          {
-            name: "orderIds",
-            type: "string",
-            list: true,
-          },
-        ],
-      },
-    ],
+    Channel: [productKitsSchema, orderKitsSchema],
+    Customer: [measurementsSchema],
   },
   plugins: [
     AssetServerPlugin.init({
