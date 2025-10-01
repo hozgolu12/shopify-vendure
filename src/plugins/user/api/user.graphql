@@ -1,0 +1,51 @@
+extend type Query {
+  userByBetterAuthId(betterAuthId: String!): User
+  currentUser: User
+  users: [User!]!
+}
+
+extend type Mutation {
+  createUser(input: CreateUserInput!): User!
+  updateUser(input: UpdateUserInput!): User!
+  upsertUser(input: UpsertUserInput!): User!
+}
+
+type User {
+  id: ID!
+  betterAuthId: String!
+  name: String!
+  email: String!
+  companyName: String
+  companyType: String
+  role: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateUserInput {
+  betterAuthId: String!
+  name: String!
+  email: String!
+  companyName: String
+  companyType: String
+  role: String
+}
+
+input UpdateUserInput {
+  id: ID!
+  betterAuthId: String
+  name: String
+  email: String
+  companyName: String
+  companyType: String
+  role: String
+}
+
+input UpsertUserInput {
+  betterAuthId: String!
+  name: String!
+  email: String!
+  companyName: String
+  companyType: String
+  role: String
+}

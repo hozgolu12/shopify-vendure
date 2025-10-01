@@ -4,7 +4,6 @@ import {
   DefaultJobQueuePlugin,
   DefaultSearchPlugin,
   VendureConfig,
-  LanguageCode,
 } from "@vendure/core";
 import { defaultEmailHandlers, EmailPlugin } from "@vendure/email-plugin";
 import {
@@ -18,6 +17,9 @@ import { CustomerRelationPlugin } from "./plugins/customer-relation/customer-rel
 import { measurementsSchema } from "./schema/customer/measurements.schema";
 import { productKitsSchema } from "./schema/channel/productKits.schema";
 import { orderKitsSchema } from "./schema/channel/orderKits.schema";
+import { ProductKit } from "./entities/product-kit.entity";
+import { UserPlugin } from "./plugins/user/user.plugin";
+
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
 const IS_DEV = process.env.APP_ENV === "dev";
@@ -75,6 +77,9 @@ export const config: VendureConfig = {
   paymentOptions: {
     paymentMethodHandlers: [dummyPaymentHandler],
   },
+
+  entityOptions: {},
+
   // When adding or altering custom field definitions, the database will
   // need to be updated. See the "Migrations" section in README.md.
   customFields: {
@@ -142,5 +147,6 @@ export const config: VendureConfig = {
       }),
     }),
     CustomerRelationPlugin,
+    UserPlugin,
   ],
 };
