@@ -29,7 +29,7 @@ export class UserResolver {
   @Query()
   @Allow(Permission.SuperAdmin)
   async users(@Ctx() ctx: RequestContext): Promise<TenantUser[]> {
-    return this.userService.findAll();
+    return this.userService.findAllLegacy();
   }
 
   @Mutation()

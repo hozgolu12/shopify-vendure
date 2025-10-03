@@ -5,11 +5,15 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from "typeorm";
-import { DeepPartial } from "@vendure/core";
+import { DeepPartial, VendureEntity, HasCustomFields } from "@vendure/core";
+import { TenantInventory } from "../../tenant-inventory/entities/tenant-inventory.entity";
+
+export class TenantUserCustomFields {}
 
 @Entity()
-export class TenantUser {
+export class TenantUser extends VendureEntity implements HasCustomFields {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -39,11 +43,13 @@ export class TenantUser {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @OneToMany(() => TenantInventory, (inventory) => inventory.user)
+  inventories: TenantInventory[];
+
   constructor(input?: DeepPartial<TenantUser>) {
-    if (input) {
-      for (const [key, value] of Object.entries(input)) {
-        (this as any)[key] = value;
-      }
-    }
+    super(input);
   }
+
+  @Column((type) => TenantUserCustomFields)
+  customFields: TenantUserCustomFields;
 }

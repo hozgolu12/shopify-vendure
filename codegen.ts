@@ -13,6 +13,7 @@ const config: CodegenConfig = {
     },
     generates: {
         './src/plugins/user/gql/generated.ts': { plugins: ['typescript'] },
+        './src/plugins/tenant-inventory/gql/generated.ts': { plugins: ['typescript'] },
     },
 };
 

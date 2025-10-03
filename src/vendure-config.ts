@@ -17,8 +17,13 @@ import { CustomerRelationPlugin } from "./plugins/customer-relation/customer-rel
 import { measurementsSchema } from "./schema/customer/measurements.schema";
 import { productKitsSchema } from "./schema/channel/productKits.schema";
 import { orderKitsSchema } from "./schema/channel/orderKits.schema";
-import { ProductKit } from "./entities/product-kit.entity";
+// import { ProductKit } from "./entities/product-kit.entity";
 import { UserPlugin } from "./plugins/user/user.plugin";
+// import { CompanyPlugin } from "./plugins/company/company.plugin";
+import { workspaceSchema } from "./schema/tenant-user/workspace.schema";
+import { locationSchema } from "./schema/tenant-user/location.schema";
+import { companySchema } from "./schema/tenant-user/company.schema";
+import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-inventory.plugin";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -91,6 +96,7 @@ export const config: VendureConfig = {
     ],
     Channel: [productKitsSchema, orderKitsSchema],
     Customer: [measurementsSchema],
+    TenantUser: [companySchema, locationSchema, workspaceSchema],
   },
   plugins: [
     AssetServerPlugin.init({
@@ -148,5 +154,6 @@ export const config: VendureConfig = {
     }),
     CustomerRelationPlugin,
     UserPlugin,
+    TenantInventoryPlugin.init({}),
   ],
 };
