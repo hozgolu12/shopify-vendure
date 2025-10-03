@@ -10,7 +10,7 @@ import {
   JoinColumn,
 } from "typeorm";
 import { DeepPartial, VendureEntity, HasCustomFields } from "@vendure/core";
-import { TenantUser } from "../../user/entities/user.entity";
+import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { TenantInventoryCustomFields } from "./tenant-inventory-custom-fields.entity";
 import { SilhouetteCategory } from "./silhouette-category.entity";
 import { Modifier } from "./modifier.entity";

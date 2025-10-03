@@ -1,0 +1,28 @@
+{
+  "input": {
+    "userId": "1",
+    "organizationId": "org_123",
+    "workspaceName": "Fashion Design Studio",
+    "productLine": "Womenswear",
+    "statuses": ["Draft", "In Progress", "Completed", "Archived"],
+    "workstations": ["Design", "Pattern Making", "Sampling", "Production"],
+    "sizeSystems": ["US", "EU", "UK", "JP"],
+    "measurementFields": [
+      {
+        "fieldName": "Bust",
+        "selectedValues": ["32", "34", "36", "38"]
+      },
+      {
+        "fieldName": "Waist",
+        "selectedValues": ["26", "28", "30", "32"]
+      },
+      {
+        "fieldName": "Hip",
+        "selectedValues": ["36", "38", "40", "42"]
+      }
+    ],
+    "customFields": {
+      "_dummy": "remove_this_when_actual_custom_fields_added"
+    }
+  }
+}

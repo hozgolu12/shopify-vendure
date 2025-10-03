@@ -9,8 +9,11 @@ import {
 } from "typeorm";
 import { DeepPartial, VendureEntity, HasCustomFields } from "@vendure/core";
 import { TenantInventory } from "../../tenant-inventory/entities/tenant-inventory.entity";
+import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
 
-export class TenantUserCustomFields {}
+export class TenantUserCustomFields {
+  
+}
 
 @Entity()
 export class TenantUser extends VendureEntity implements HasCustomFields {
@@ -45,6 +48,9 @@ export class TenantUser extends VendureEntity implements HasCustomFields {
 
   @OneToMany(() => TenantInventory, (inventory) => inventory.user)
   inventories: TenantInventory[];
+
+  @OneToMany(() => Workspace, (workspace) => workspace.user)
+  workspaces: Workspace[];
 
   constructor(input?: DeepPartial<TenantUser>) {
     super(input);

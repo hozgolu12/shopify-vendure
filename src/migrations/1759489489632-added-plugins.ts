@@ -1,6 +1,6 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class AddedInventoryPlugin1759482419937 implements MigrationInterface {
+export class AddedPlugins1759489489632 implements MigrationInterface {
 
    public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`CREATE TABLE "silhouette_category" ("id" SERIAL NOT NULL, "silhouetteId" character varying NOT NULL, "name" character varying NOT NULL, "enabled" boolean NOT NULL, "silhouetteTypes" text NOT NULL, "inventoryId" integer, CONSTRAINT "PK_c9a7e644d1bd04081e08b6f5eb1" PRIMARY KEY ("id"))`, undefined);
@@ -12,9 +12,11 @@ export class AddedInventoryPlugin1759482419937 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "regular_attribute" ("id" SERIAL NOT NULL, "regularAttributeId" character varying NOT NULL, "name" character varying NOT NULL, "description" character varying NOT NULL, "enabled" boolean NOT NULL, "properties" text NOT NULL, "group" character varying, "parent" character varying, "abbreviation" character varying, "inventoryId" integer, CONSTRAINT "PK_c96562c94eb7253ce768e977b3a" PRIMARY KEY ("id"))`, undefined);
         await queryRunner.query(`CREATE TABLE "item_code" ("id" SERIAL NOT NULL, "itemCodeAttributes" text NOT NULL, "itemNameAttributes" text NOT NULL, "delimiter" character varying NOT NULL, "itemCode" character varying NOT NULL, "itemName" character varying NOT NULL, "inventoryId" integer, CONSTRAINT "PK_f28aae3697811a4da5ec0a7e601" PRIMARY KEY ("id"))`, undefined);
         await queryRunner.query(`CREATE TABLE "tenant_inventory" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "userId" integer NOT NULL, "workspaceId" character varying, "productRegions" text NOT NULL, "itemCodeId" integer, CONSTRAINT "REL_82f1a9bce2683fc56a6ab48012" UNIQUE ("itemCodeId"), CONSTRAINT "PK_16f5cfba01291e36b5aa9d59873" PRIMARY KEY ("id"))`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsCompany" jsonb`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsLocation" jsonb`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsWorkspace" jsonb`, undefined);
+        await queryRunner.query(`CREATE TABLE "measurement_field" ("id" SERIAL NOT NULL, "fieldName" character varying NOT NULL, "selectedValues" text NOT NULL, "workspaceId" integer, CONSTRAINT "PK_61f6039fd3801fc0cfc9dc19d9b" PRIMARY KEY ("id"))`, undefined);
+        await queryRunner.query(`CREATE TABLE "workspace" ("createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), "id" SERIAL NOT NULL, "userId" integer NOT NULL, "organizationId" character varying, "workspaceName" character varying NOT NULL, "productLine" character varying NOT NULL, "statuses" text NOT NULL, "workstations" text NOT NULL, "sizeSystems" text NOT NULL, CONSTRAINT "PK_ca86b6f9b3be5fe26d307d09b49" PRIMARY KEY ("id"))`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsWorkspace"`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsCompany"`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsLocation"`, undefined);
         await queryRunner.query(`ALTER TABLE "silhouette_category" ADD CONSTRAINT "FK_32de9a366938f6cf0b16cb607b8" FOREIGN KEY ("inventoryId") REFERENCES "tenant_inventory"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
         await queryRunner.query(`ALTER TABLE "modifier" ADD CONSTRAINT "FK_ee377cdf16793c0b7568a3af177" FOREIGN KEY ("inventoryId") REFERENCES "tenant_inventory"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
         await queryRunner.query(`ALTER TABLE "attribute" ADD CONSTRAINT "FK_a718481c2caad025bf04f98790d" FOREIGN KEY ("inventoryId") REFERENCES "tenant_inventory"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
@@ -25,9 +27,13 @@ export class AddedInventoryPlugin1759482419937 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "item_code" ADD CONSTRAINT "FK_9333649022d95cde2ae7cc9f60c" FOREIGN KEY ("inventoryId") REFERENCES "tenant_inventory"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
         await queryRunner.query(`ALTER TABLE "tenant_inventory" ADD CONSTRAINT "FK_ec6eec3bd3061e8fdd577303691" FOREIGN KEY ("userId") REFERENCES "tenant_user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
         await queryRunner.query(`ALTER TABLE "tenant_inventory" ADD CONSTRAINT "FK_82f1a9bce2683fc56a6ab48012f" FOREIGN KEY ("itemCodeId") REFERENCES "item_code"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
+        await queryRunner.query(`ALTER TABLE "measurement_field" ADD CONSTRAINT "FK_0fc27fc2e77150a10cbd3196b2c" FOREIGN KEY ("workspaceId") REFERENCES "workspace"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
+        await queryRunner.query(`ALTER TABLE "workspace" ADD CONSTRAINT "FK_b48532fc84800d41cfee110682c" FOREIGN KEY ("userId") REFERENCES "tenant_user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`, undefined);
    }
 
    public async down(queryRunner: QueryRunner): Promise<any> {
+        await queryRunner.query(`ALTER TABLE "workspace" DROP CONSTRAINT "FK_b48532fc84800d41cfee110682c"`, undefined);
+        await queryRunner.query(`ALTER TABLE "measurement_field" DROP CONSTRAINT "FK_0fc27fc2e77150a10cbd3196b2c"`, undefined);
         await queryRunner.query(`ALTER TABLE "tenant_inventory" DROP CONSTRAINT "FK_82f1a9bce2683fc56a6ab48012f"`, undefined);
         await queryRunner.query(`ALTER TABLE "tenant_inventory" DROP CONSTRAINT "FK_ec6eec3bd3061e8fdd577303691"`, undefined);
         await queryRunner.query(`ALTER TABLE "item_code" DROP CONSTRAINT "FK_9333649022d95cde2ae7cc9f60c"`, undefined);
@@ -38,9 +44,11 @@ export class AddedInventoryPlugin1759482419937 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "attribute" DROP CONSTRAINT "FK_a718481c2caad025bf04f98790d"`, undefined);
         await queryRunner.query(`ALTER TABLE "modifier" DROP CONSTRAINT "FK_ee377cdf16793c0b7568a3af177"`, undefined);
         await queryRunner.query(`ALTER TABLE "silhouette_category" DROP CONSTRAINT "FK_32de9a366938f6cf0b16cb607b8"`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsWorkspace"`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsLocation"`, undefined);
-        await queryRunner.query(`ALTER TABLE "tenant_user" DROP COLUMN "customFieldsCompany"`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsLocation" jsonb`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsCompany" jsonb`, undefined);
+        await queryRunner.query(`ALTER TABLE "tenant_user" ADD "customFieldsWorkspace" jsonb`, undefined);
+        await queryRunner.query(`DROP TABLE "workspace"`, undefined);
+        await queryRunner.query(`DROP TABLE "measurement_field"`, undefined);
         await queryRunner.query(`DROP TABLE "tenant_inventory"`, undefined);
         await queryRunner.query(`DROP TABLE "item_code"`, undefined);
         await queryRunner.query(`DROP TABLE "regular_attribute"`, undefined);
