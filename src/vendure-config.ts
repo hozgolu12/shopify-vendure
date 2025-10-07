@@ -19,7 +19,7 @@ import { productKitsSchema } from "./schema/channel/productKits.schema";
 import { orderKitsSchema } from "./schema/channel/orderKits.schema";
 // import { ProductKit } from "./entities/product-kit.entity";
 import { UserPlugin } from "./plugins/tenant-user/user.plugin";
-// // import { CompanyPlugin } from "./plugins/company/company.plugin";
+import { CompanyPlugin } from "./plugins/tenant-company/company.plugin";
 // import { workspaceSchema } from "./schema/tenant-user/workspace.schema";
 // import { locationSchema } from "./schema/tenant-user/location.schema";
 // import { companySchema } from "./schema/tenant-user/company.schema";
@@ -155,6 +155,7 @@ export const config: VendureConfig = {
     }),
     CustomerRelationPlugin,
     UserPlugin,
+    CompanyPlugin,
     TenantInventoryPlugin.init({}),
     WorkspacePlugin.init({}),
   ],

@@ -1,10 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
+import { Column } from "typeorm";
 
-@Entity()
 export class TenantCompanyDetails {
-  @PrimaryGeneratedColumn()
-  id: number;
-
   @Column({ length: 100 })
   orgName: string;
 

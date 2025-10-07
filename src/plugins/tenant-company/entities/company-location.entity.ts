@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
-import { BesPosCompany } from "./company.entity";
+import { TenantCompany } from "./company.entity";
 
 @Entity()
 export class TenantCompanyLocation {
@@ -39,6 +39,6 @@ export class TenantCompanyLocation {
     [key: string]: boolean;
   };
 
-  @ManyToOne(() => BesPosCompany, (company) => company.locations)
-  company: BesPosCompany;
+  @ManyToOne(() => TenantCompany, (company) => company.locations)
+  company: TenantCompany;
 }

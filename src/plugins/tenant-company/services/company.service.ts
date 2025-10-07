@@ -1,30 +1,29 @@
 import { Injectable } from "@nestjs/common";
 import { TransactionalConnection, ID } from "@vendure/core";
-import { BesPosCompany } from "../entities/company.entity";
+import { TenantCompany } from "../entities/company.entity";
 import { TenantCompanyLocation } from "../entities/company-location.entity";
-import { TenantWorkspace } from "../entities/workspace.entity";
 
 @Injectable()
 export class CompanyService {
   constructor(private connection: TransactionalConnection) {}
 
-  async findOneById(id: ID): Promise<BesPosCompany | null> {
-    return this.connection.getRepository(BesPosCompany).findOne({
+  async findOneById(id: ID): Promise<TenantCompany | null> {
+    return this.connection.getRepository(TenantCompany).findOne({
       where: { id: id as any },
-      relations: ["user", "locations", "workspaces"],
+      relations: ["user", "locations"],
     });
   }
 
-  async findByUserId(userId: ID): Promise<BesPosCompany | null> {
-    return this.connection.getRepository(BesPosCompany).findOne({
-      where: { userId: userId as any },
-      relations: ["locations", "workspaces"],
+  async findByUserId(userId: ID): Promise<TenantCompany | null> {
+    return this.connection.getRepository(TenantCompany).findOne({
+      where: { user: { id: userId as any } },
+      relations: ["locations"],
     });
   }
 
-  async findAll(): Promise<BesPosCompany[]> {
-    return this.connection.getRepository(BesPosCompany).find({
-      relations: ["user", "locations", "workspaces"],
+  async findAll(): Promise<TenantCompany[]> {
+    return this.connection.getRepository(TenantCompany).find({
+      relations: ["user", "locations"],
     });
   }
 
@@ -58,14 +57,9 @@ export class CompanyService {
         custom?: boolean;
       };
     }>;
-    workspaces?: Array<{
-      workspaceName: string;
-      productLine: string;
-    }>;
-  }): Promise<BesPosCompany> {
-    const companyRepo = this.connection.getRepository(BesPosCompany);
+  }): Promise<TenantCompany> {
+    const companyRepo = this.connection.getRepository(TenantCompany);
     const locationRepo = this.connection.getRepository(TenantCompanyLocation);
-    const workspaceRepo = this.connection.getRepository(TenantWorkspace);
 
     // Check if company already exists for this user
     const existingCompany = await this.findByUserId(input.userId);
@@ -74,7 +68,7 @@ export class CompanyService {
     }
 
     const company = companyRepo.create({
-      userId: input.userId as number,
+      user: { id: input.userId as number },
       companyDetails: input.companyDetails,
     });
 
@@ -91,18 +85,7 @@ export class CompanyService {
       savedCompany.locations = await locationRepo.save(locations);
     }
 
-    // Create workspaces if provided
-    if (input.workspaces && input.workspaces.length > 0) {
-      const workspaces = input.workspaces.map((workspace) =>
-        workspaceRepo.create({
-          ...workspace,
-          company: savedCompany,
-        })
-      );
-      savedCompany.workspaces = await workspaceRepo.save(workspaces);
-    }
-
-    return this.findOneById(savedCompany.id) as Promise<BesPosCompany>;
+    return this.findOneById(savedCompany.id) as Promise<TenantCompany>;
   }
 
   async updateCompany(input: {
@@ -118,8 +101,8 @@ export class CompanyService {
         handle: string;
       };
     };
-  }): Promise<BesPosCompany> {
-    const companyRepo = this.connection.getRepository(BesPosCompany);
+  }): Promise<TenantCompany> {
+    const companyRepo = this.connection.getRepository(TenantCompany);
 
     const company = await this.findOneById(input.id);
     if (!company) {
@@ -134,7 +117,7 @@ export class CompanyService {
     }
 
     await companyRepo.save(company);
-    return this.findOneById(input.id) as Promise<BesPosCompany>;
+    return this.findOneById(input.id) as Promise<TenantCompany>;
   }
 
   async upsertCompany(input: {
@@ -167,11 +150,7 @@ export class CompanyService {
         custom?: boolean;
       };
     }>;
-    workspaces?: Array<{
-      workspaceName: string;
-      productLine: string;
-    }>;
-  }): Promise<BesPosCompany> {
+  }): Promise<TenantCompany> {
     const existingCompany = await this.findByUserId(input.userId);
 
     if (existingCompany) {
@@ -203,7 +182,7 @@ export class CompanyService {
         custom?: boolean;
       };
     }
-  ): Promise<BesPosCompany> {
+  ): Promise<TenantCompany> {
     const locationRepo = this.connection.getRepository(TenantCompanyLocation);
 
     const company = await this.findOneById(companyId);
@@ -217,35 +196,12 @@ export class CompanyService {
     });
 
     await locationRepo.save(newLocation);
-    return this.findOneById(companyId) as Promise<BesPosCompany>;
-  }
-
-  async addWorkspace(
-    companyId: ID,
-    workspace: {
-      workspaceName: string;
-      productLine: string;
-    }
-  ): Promise<BesPosCompany> {
-    const workspaceRepo = this.connection.getRepository(TenantWorkspace);
-
-    const company = await this.findOneById(companyId);
-    if (!company) {
-      throw new Error(`Company with id ${companyId} not found`);
-    }
-
-    const newWorkspace = workspaceRepo.create({
-      ...workspace,
-      company,
-    });
-
-    await workspaceRepo.save(newWorkspace);
-    return this.findOneById(companyId) as Promise<BesPosCompany>;
+    return this.findOneById(companyId) as Promise<TenantCompany>;
   }
 
   async deleteCompany(id: ID): Promise<boolean> {
     const result = await this.connection
-      .getRepository(BesPosCompany)
+      .getRepository(TenantCompany)
       .delete(id);
     return result.affected ? result.affected > 0 : false;
   }

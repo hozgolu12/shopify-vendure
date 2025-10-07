@@ -1,7 +1,7 @@
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { Ctx, RequestContext, Allow, Permission, ID } from "@vendure/core";
 import { CompanyService } from "../services/company.service";
-import { BesPosCompany } from "../entities/company.entity";
+import { TenantCompany } from "../entities/company.entity";
 
 @Resolver()
 export class TenantCompanyResolver {
@@ -12,7 +12,7 @@ export class TenantCompanyResolver {
   async besPosCompany(
     @Ctx() ctx: RequestContext,
     @Args() args: { id: ID }
-  ): Promise<BesPosCompany | null> {
+  ): Promise<TenantCompany | null> {
     return this.companyService.findOneById(args.id);
   }
 
@@ -21,7 +21,7 @@ export class TenantCompanyResolver {
   async besPosCompanyByUserId(
     @Ctx() ctx: RequestContext,
     @Args() args: { userId: ID }
-  ): Promise<BesPosCompany | null> {
+  ): Promise<TenantCompany | null> {
     return this.companyService.findByUserId(args.userId);
   }
 
@@ -29,7 +29,7 @@ export class TenantCompanyResolver {
   @Allow(Permission.Authenticated)
   async myBesPosCompany(
     @Ctx() ctx: RequestContext
-  ): Promise<BesPosCompany | null> {
+  ): Promise<TenantCompany | null> {
     const userId = (ctx as any).session?.user?.id;
     if (!userId) {
       return null;
@@ -39,7 +39,7 @@ export class TenantCompanyResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin)
-  async besPosCompanies(@Ctx() ctx: RequestContext): Promise<BesPosCompany[]> {
+  async besPosCompanies(@Ctx() ctx: RequestContext): Promise<TenantCompany[]> {
     return this.companyService.findAll();
   }
 
@@ -48,7 +48,7 @@ export class TenantCompanyResolver {
   async createBesPosCompany(
     @Ctx() ctx: RequestContext,
     @Args() args: { input: any }
-  ): Promise<BesPosCompany> {
+  ): Promise<TenantCompany> {
     return this.companyService.createCompany(args.input);
   }
 
@@ -57,7 +57,7 @@ export class TenantCompanyResolver {
   async updateBesPosCompany(
     @Ctx() ctx: RequestContext,
     @Args() args: { input: any }
-  ): Promise<BesPosCompany> {
+  ): Promise<TenantCompany> {
     return this.companyService.updateCompany(args.input);
   }
 
@@ -66,7 +66,7 @@ export class TenantCompanyResolver {
   async upsertBesPosCompany(
     @Ctx() ctx: RequestContext,
     @Args() args: { input: any }
-  ): Promise<BesPosCompany> {
+  ): Promise<TenantCompany> {
     return this.companyService.upsertCompany(args.input);
   }
 
@@ -75,16 +75,7 @@ export class TenantCompanyResolver {
   async addLocationToBesPosCompany(
     @Ctx() ctx: RequestContext,
     @Args() args: { companyId: ID; location: any }
-  ): Promise<BesPosCompany> {
+  ): Promise<TenantCompany> {
     return this.companyService.addLocation(args.companyId, args.location);
-  }
-
-  @Mutation()
-  @Allow(Permission.Authenticated)
-  async addWorkspaceToBesPosCompany(
-    @Ctx() ctx: RequestContext,
-    @Args() args: { companyId: ID; workspace: any }
-  ): Promise<BesPosCompany> {
-    return this.companyService.addWorkspace(args.companyId, args.workspace);
   }
 }

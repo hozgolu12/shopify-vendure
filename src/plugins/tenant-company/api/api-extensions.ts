@@ -16,10 +16,6 @@ export const schema = gql`
       companyId: ID!
       location: TenantLocationInput!
     ): BesPosCompany!
-    addWorkspaceToBesPosCompany(
-      companyId: ID!
-      workspace: TenantWorkspaceInput!
-    ): BesPosCompany!
   }
 
   type BesPosCompany {
@@ -27,7 +23,6 @@ export const schema = gql`
     user: TenantUser!
     companyDetails: TenantCompanyDetails!
     locations: [TenantCompanyLocation!]!
-    workspaces: [TenantWorkspace!]!
     createdAt: DateTime!
     updatedAt: DateTime!
   }
@@ -67,17 +62,10 @@ export const schema = gql`
     custom: JSON
   }
 
-  type TenantWorkspace {
-    id: ID!
-    workspaceName: String!
-    productLine: String!
-  }
-
   input CreateBesPosCompanyInput {
     userId: ID!
     companyDetails: TenantCompanyDetailsInput!
     locations: [TenantLocationInput!]
-    workspaces: [TenantWorkspaceInput!]
   }
 
   input UpdateBesPosCompanyInput {
@@ -89,7 +77,6 @@ export const schema = gql`
     userId: ID!
     companyDetails: TenantCompanyDetailsInput!
     locations: [TenantLocationInput!]
-    workspaces: [TenantWorkspaceInput!]
   }
 
   input TenantCompanyDetailsInput {
@@ -124,10 +111,5 @@ export const schema = gql`
     manufacturing: Boolean
     backOffice: Boolean
     custom: JSON
-  }
-
-  input TenantWorkspaceInput {
-    workspaceName: String!
-    productLine: String!
   }
 `;
