@@ -26,6 +26,7 @@ import { CompanyPlugin } from "./plugins/tenant-company/company.plugin";
 import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-inventory.plugin";
 import { WorkspacePlugin } from "./plugins/tenant-workspace/tenant-workspace.plugin";
 import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
+import { productTypeSchema } from "./schema/product/product-type.schema";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -90,12 +91,7 @@ export const config: VendureConfig = {
   // When adding or altering custom field definitions, the database will
   // need to be updated. See the "Migrations" section in README.md.
   customFields: {
-    Product: [
-      {
-        name: "test",
-        type: "string",
-      },
-    ],
+    Product: [productTypeSchema],
     Channel: [productKitsSchema, orderKitsSchema],
     Customer: [measurementsSchema],
     // TenantUser: [companySchema, locationSchema, workspaceSchema],
