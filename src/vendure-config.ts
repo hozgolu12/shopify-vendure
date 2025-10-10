@@ -25,6 +25,7 @@ import { CompanyPlugin } from "./plugins/tenant-company/company.plugin";
 // import { companySchema } from "./schema/tenant-user/company.schema";
 import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-inventory.plugin";
 import { WorkspacePlugin } from "./plugins/tenant-workspace/tenant-workspace.plugin";
+import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -158,5 +159,6 @@ export const config: VendureConfig = {
     CompanyPlugin,
     TenantInventoryPlugin.init({}),
     WorkspacePlugin.init({}),
+    ProductKitPlugin.init({}),
   ],
 };

@@ -15,6 +15,7 @@ const config: CodegenConfig = {
         './src/plugins/user/gql/generated.ts': { plugins: ['typescript'] },
         './src/plugins/tenant-inventory/gql/generated.ts': { plugins: ['typescript'] },
         './src/plugins/tenant-workspace/gql/generated.ts': { plugins: ['typescript'] },
+        './src/plugins/product-kit/gql/generated.ts': { plugins: ['typescript'] },
     },
 };
 
