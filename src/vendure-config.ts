@@ -27,6 +27,7 @@ import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-invento
 import { WorkspacePlugin } from "./plugins/tenant-workspace/tenant-workspace.plugin";
 import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
 import { productTypeSchema } from "./schema/product/product-type.schema";
+import { ProductionOrderPlugin } from './plugins/production-order/production-order.plugin';
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -156,5 +157,6 @@ export const config: VendureConfig = {
     TenantInventoryPlugin.init({}),
     WorkspacePlugin.init({}),
     ProductKitPlugin.init({}),
-  ],
+      ProductionOrderPlugin.init({}),
+],
 };
