@@ -27,7 +27,8 @@ import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-invento
 import { WorkspacePlugin } from "./plugins/tenant-workspace/tenant-workspace.plugin";
 import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
 import { productTypeSchema } from "./schema/product/product-type.schema";
-import { ProductionOrderPlugin } from './plugins/production-order/production-order.plugin';
+import { ProductionOrderPlugin } from "./plugins/production-order/production-order.plugin";
+import { itemConfigSchema } from "./schema/product/item-config.schema";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -92,7 +93,7 @@ export const config: VendureConfig = {
   // When adding or altering custom field definitions, the database will
   // need to be updated. See the "Migrations" section in README.md.
   customFields: {
-    Product: [productTypeSchema],
+    Product: [productTypeSchema, itemConfigSchema],
     Channel: [productKitsSchema, orderKitsSchema],
     Customer: [measurementsSchema],
     // TenantUser: [companySchema, locationSchema, workspaceSchema],
@@ -157,6 +158,6 @@ export const config: VendureConfig = {
     TenantInventoryPlugin.init({}),
     WorkspacePlugin.init({}),
     ProductKitPlugin.init({}),
-      ProductionOrderPlugin.init({}),
-],
+    ProductionOrderPlugin.init({}),
+  ],
 };
