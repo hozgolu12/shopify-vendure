@@ -8,10 +8,8 @@ import {
   Transaction,
 } from "@vendure/core";
 import { ProductionOrderService } from "../services/production-order.service";
-import {
-  ProductionOrder,
-  ProductionStatus,
-} from "../entities/production-order.entity";
+import { ProductionOrder } from "../entities/production-order.entity";
+import { ProductionStatus } from "../constants";
 
 @Resolver()
 export class ProductionOrderResolver {
@@ -76,20 +74,44 @@ export class ProductionOrderResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
-  async productionOrdersByGroup(
+  async productionOrdersByStage(
     @Ctx() ctx: RequestContext,
-    @Args() args: { groupId: number }
+    @Args() args: { stage: string }
   ): Promise<ProductionOrder[]> {
-    return this.productionOrderService.findByGroup(ctx, args.groupId);
+    return this.productionOrderService.findByStage(ctx, args.stage);
   }
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
-  async productionOrderStatistics(
+  async productionOrdersByVendureOrder(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { vendureOrderId: number }
+  ): Promise<ProductionOrder[]> {
+    return this.productionOrderService.findByVendureOrder(
+      ctx,
+      args.vendureOrderId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderStatisticsByStatus(
     @Ctx() ctx: RequestContext,
     @Args() args: { tenantId: number }
   ): Promise<any[]> {
-    return this.productionOrderService.getStatistics(ctx, args.tenantId);
+    return this.productionOrderService.getStatisticsByStatus(
+      ctx,
+      args.tenantId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderStatisticsByStage(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { tenantId: number }
+  ): Promise<any[]> {
+    return this.productionOrderService.getStatisticsByStage(ctx, args.tenantId);
   }
 
   @Mutation()
@@ -125,6 +147,16 @@ export class ProductionOrderResolver {
   @Mutation()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder)
   @Transaction()
+  async updateProductionOrderStage(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { input: any }
+  ): Promise<ProductionOrder> {
+    return this.productionOrderService.updateStage(ctx, args.input);
+  }
+
+  @Mutation()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder)
+  @Transaction()
   async deleteProductionOrder(
     @Ctx() ctx: RequestContext,
     @Args() args: { id: ID }
@@ -136,33 +168,5 @@ export class ProductionOrderResolver {
         ? "Production order deleted successfully"
         : "Failed to delete production order",
     };
-  }
-
-  @Mutation()
-  @Allow(Permission.SuperAdmin, Permission.UpdateOrder)
-  @Transaction()
-  async createMtoOrder(
-    @Ctx() ctx: RequestContext,
-    @Args() args: { groupTitle: string; orders: any[] }
-  ): Promise<ProductionOrder[]> {
-    return this.productionOrderService.createMtoOrder(
-      ctx,
-      args.groupTitle,
-      args.orders
-    );
-  }
-
-  @Mutation()
-  @Allow(Permission.SuperAdmin, Permission.UpdateOrder)
-  @Transaction()
-  async createAlterationOrder(
-    @Ctx() ctx: RequestContext,
-    @Args() args: { groupTitle: string; orders: any[] }
-  ): Promise<ProductionOrder[]> {
-    return this.productionOrderService.createAlterationOrder(
-      ctx,
-      args.groupTitle,
-      args.orders
-    );
   }
 }

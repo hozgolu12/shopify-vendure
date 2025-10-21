@@ -3,9 +3,9 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
 } from "typeorm";
 import {
   DeepPartial,
@@ -13,26 +13,14 @@ import {
   HasCustomFields,
   ID,
   Customer,
+  Order,
+  ProductVariant,
 } from "@vendure/core";
 import { ProductionOrderCustomFields } from "./production-order-custom-fields.entity";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
-
-export enum ProductionOrderType {
-  ALTERATION = "ALTERATION",
-  MTO = "MADE-TO-ORDER",
-  CUSTOM = "CUSTOM",
-}
-
-export enum ProductionStatus {
-  DRAFT = "DRAFT",
-  PENDING = "PENDING",
-  IN_PROGRESS = "IN_PROGRESS",
-  READY_FOR_QC = "READY_FOR_QC",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-  ON_HOLD = "ON_HOLD",
-}
+import { ProductKit } from "../../product-kit/entities/product-kit.entity";
+import { ProductionOrderType, ProductionStatus } from "../constants";
 
 @Entity()
 export class ProductionOrder extends VendureEntity implements HasCustomFields {
@@ -51,6 +39,30 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column()
   workspaceId: number;
 
+  // Vendure Order relationship
+  @ManyToOne(() => Order, { nullable: true })
+  @JoinColumn({ name: "vendureOrderId" })
+  vendureOrder: Order;
+
+  @Column({ nullable: true })
+  vendureOrderId: number;
+
+  // Vendure Item relationship (ProductVariant)
+  @ManyToMany(() => ProductVariant, { nullable: true })
+  @JoinColumn({ name: "vendureItemId" })
+  vendureItem: ProductVariant;
+
+  @Column({ nullable: true })
+  vendureItemId: number;
+
+  // Product Kit relationship
+  @ManyToOne(() => ProductKit, { nullable: true })
+  @JoinColumn({ name: "productKitId" })
+  productKit: ProductKit;
+
+  @Column({ nullable: true })
+  productKitId: number;
+
   // Customer relationship
   @ManyToOne(() => Customer)
   @JoinColumn({ name: "customerId" })
@@ -63,16 +75,13 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column({
     type: "enum",
     enum: ProductionOrderType,
-    default: ProductionOrderType.MTO,
+    default: ProductionOrderType.PRODUCTION,
   })
   orderType: ProductionOrderType;
 
-  // Group information (for bulk orders)
-  @Column({ nullable: true })
-  groupId: number;
-
+  // Product Kit Title (custom name provided by customer)
   @Column("text", { nullable: true })
-  groupTitle: string;
+  productKitTitle: string;
 
   // Item information
   @Column("text")
@@ -80,6 +89,10 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
 
   @Column("text")
   itemTitle: string;
+
+  // Item configuration (JSON)
+  @Column("simple-json")
+  itemConfig: any;
 
   // Status
   @Column({
@@ -89,9 +102,13 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   })
   status: ProductionStatus;
 
-  // Item configuration (JSON)
-  @Column("simple-json")
-  itemConfig: any;
+  // Stage (text field with default value)
+  @Column({ default: "not-started" })
+  stage: string;
+
+  // Design ID
+  @Column({ nullable: true })
+  designId: number;
 
   // Audit fields
   @CreateDateColumn()
@@ -103,16 +120,6 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
 
   @Column()
   createdBy: number;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-
-  @ManyToOne(() => TenantUser)
-  @JoinColumn({ name: "updatedBy" })
-  updatedByUser: TenantUser;
-
-  @Column()
-  updatedBy: number;
 
   @Column((type) => ProductionOrderCustomFields)
   customFields: ProductionOrderCustomFields;

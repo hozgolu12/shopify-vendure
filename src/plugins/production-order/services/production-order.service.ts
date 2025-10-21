@@ -9,26 +9,29 @@ import {
   RelationPaths,
   PaginatedList,
   Customer,
+  Order,
 } from "@vendure/core";
-import {
-  ProductionOrder,
-  ProductionOrderType,
-  ProductionStatus,
-} from "../entities/production-order.entity";
+import { ProductionOrder } from "../entities/production-order.entity";
+import { ProductionOrderType, ProductionStatus } from "../constants";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
+import { ProductKit } from "../../product-kit/entities/product-kit.entity";
 
 interface CreateProductionOrderInput {
   tenantId: number;
   workspaceId: number;
+  vendureOrderId?: number;
+  vendureItemId?: number;
+  productKitId?: number;
   customerId: number;
   orderType: ProductionOrderType;
-  groupId?: number;
-  groupTitle?: string;
+  productKitTitle?: string;
   itemCode: string;
   itemTitle: string;
-  status?: ProductionStatus;
   itemConfig: any;
+  status?: ProductionStatus;
+  stage?: string;
+  designId?: number;
   createdBy: number;
   customFields?: any;
 }
@@ -36,22 +39,29 @@ interface CreateProductionOrderInput {
 interface UpdateProductionOrderInput {
   id: ID;
   workspaceId?: number;
+  vendureOrderId?: number;
+  vendureItemId?: number;
+  productKitId?: number;
   customerId?: number;
   orderType?: ProductionOrderType;
-  groupId?: number;
-  groupTitle?: string;
+  productKitTitle?: string;
   itemCode?: string;
   itemTitle?: string;
-  status?: ProductionStatus;
   itemConfig?: any;
-  updatedBy: number;
+  status?: ProductionStatus;
+  stage?: string;
+  designId?: number;
   customFields?: any;
 }
 
 interface UpdateProductionOrderStatusInput {
   id: ID;
   status: ProductionStatus;
-  updatedBy: number;
+}
+
+interface UpdateProductionOrderStageInput {
+  id: ID;
+  stage: string;
 }
 
 @Injectable()
@@ -73,7 +83,8 @@ export class ProductionOrderService {
           "workspace",
           "customer",
           "createdByUser",
-          "updatedByUser",
+          "vendureOrder",
+          "productKit",
         ],
         ctx,
       })
@@ -95,7 +106,8 @@ export class ProductionOrderService {
         "workspace",
         "customer",
         "createdByUser",
-        "updatedByUser",
+        "vendureOrder",
+        "productKit",
       ],
     });
   }
@@ -107,7 +119,12 @@ export class ProductionOrderService {
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
       where: { tenantId },
-      relations: relations || ["workspace", "customer", "createdByUser"],
+      relations: relations || [
+        "workspace",
+        "customer",
+        "createdByUser",
+        "vendureOrder",
+      ],
       order: { createdAt: "DESC" },
     });
   }
@@ -119,7 +136,7 @@ export class ProductionOrderService {
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
       where: { workspaceId },
-      relations: relations || ["customer", "createdByUser"],
+      relations: relations || ["customer", "createdByUser", "vendureOrder"],
       order: { createdAt: "DESC" },
     });
   }
@@ -131,7 +148,7 @@ export class ProductionOrderService {
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
       where: { customerId },
-      relations: relations || ["workspace", "createdByUser"],
+      relations: relations || ["workspace", "createdByUser", "vendureOrder"],
       order: { createdAt: "DESC" },
     });
   }
@@ -143,18 +160,40 @@ export class ProductionOrderService {
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
       where: { status },
-      relations: relations || ["workspace", "customer", "createdByUser"],
+      relations: relations || [
+        "workspace",
+        "customer",
+        "createdByUser",
+        "vendureOrder",
+      ],
       order: { createdAt: "DESC" },
     });
   }
 
-  async findByGroup(
+  async findByStage(
     ctx: RequestContext,
-    groupId: number,
+    stage: string,
     relations?: RelationPaths<ProductionOrder>
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
-      where: { groupId },
+      where: { stage },
+      relations: relations || [
+        "workspace",
+        "customer",
+        "createdByUser",
+        "vendureOrder",
+      ],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async findByVendureOrder(
+    ctx: RequestContext,
+    vendureOrderId: number,
+    relations?: RelationPaths<ProductionOrder>
+  ): Promise<ProductionOrder[]> {
+    return this.connection.getRepository(ctx, ProductionOrder).find({
+      where: { vendureOrderId },
       relations: relations || ["workspace", "customer", "createdByUser"],
       order: { createdAt: "DESC" },
     });
@@ -171,6 +210,8 @@ export class ProductionOrderService {
     const workspaceRepo = this.connection.getRepository(ctx, Workspace);
     const customerRepo = this.connection.getRepository(ctx, Customer);
     const userRepo = this.connection.getRepository(ctx, TenantUser);
+    const orderRepo = this.connection.getRepository(ctx, Order);
+    const productKitRepo = this.connection.getRepository(ctx, ProductKit);
 
     // Verify workspace exists
     const workspace = await workspaceRepo.findOne({
@@ -196,19 +237,44 @@ export class ProductionOrderService {
       throw new Error(`User with id ${input.createdBy} not found`);
     }
 
+    // Verify vendure order exists if provided
+    if (input.vendureOrderId) {
+      const vendureOrder = await orderRepo.findOne({
+        where: { id: input.vendureOrderId as any },
+      });
+      if (!vendureOrder) {
+        throw new Error(
+          `Vendure order with id ${input.vendureOrderId} not found`
+        );
+      }
+    }
+
+    // Verify product kit exists if provided
+    if (input.productKitId) {
+      const productKit = await productKitRepo.findOne({
+        where: { id: input.productKitId },
+      });
+      if (!productKit) {
+        throw new Error(`Product kit with id ${input.productKitId} not found`);
+      }
+    }
+
     const productionOrder = productionOrderRepo.create({
       tenantId: input.tenantId,
       workspaceId: input.workspaceId,
+      vendureOrderId: input.vendureOrderId,
+      vendureItemId: input.vendureItemId,
+      productKitId: input.productKitId,
       customerId: input.customerId,
       orderType: input.orderType,
-      groupId: input.groupId,
-      groupTitle: input.groupTitle,
+      productKitTitle: input.productKitTitle,
       itemCode: input.itemCode,
       itemTitle: input.itemTitle,
-      status: input.status || ProductionStatus.DRAFT,
       itemConfig: input.itemConfig,
+      status: input.status || ProductionStatus.DRAFT,
+      stage: input.stage || "not-started",
+      designId: input.designId,
       createdBy: input.createdBy,
-      updatedBy: input.createdBy, // Same as createdBy initially
     });
 
     const savedOrder = await productionOrderRepo.save(productionOrder);
@@ -234,23 +300,14 @@ export class ProductionOrderService {
       ctx,
       ProductionOrder
     );
-    const { id, customFields, updatedBy, ...updateData } = input;
+    const { id, customFields, ...updateData } = input;
 
     const productionOrder = await this.findOneById(ctx, id);
     if (!productionOrder) {
       throw new Error(`Production order with id ${id} not found`);
     }
 
-    // Verify updatedBy user exists
-    const userRepo = this.connection.getRepository(ctx, TenantUser);
-    const updatedByUser = await userRepo.findOne({ where: { id: updatedBy } });
-    if (!updatedByUser) {
-      throw new Error(`User with id ${updatedBy} not found`);
-    }
-
     Object.assign(productionOrder, updateData);
-    productionOrder.updatedBy = updatedBy;
-
     await productionOrderRepo.save(productionOrder);
 
     // Handle custom fields
@@ -274,23 +331,34 @@ export class ProductionOrderService {
       ctx,
       ProductionOrder
     );
-    const { id, status, updatedBy } = input;
+    const { id, status } = input;
 
     const productionOrder = await this.findOneById(ctx, id);
     if (!productionOrder) {
       throw new Error(`Production order with id ${id} not found`);
     }
 
-    // Verify updatedBy user exists
-    const userRepo = this.connection.getRepository(ctx, TenantUser);
-    const updatedByUser = await userRepo.findOne({ where: { id: updatedBy } });
-    if (!updatedByUser) {
-      throw new Error(`User with id ${updatedBy} not found`);
+    productionOrder.status = status;
+    await productionOrderRepo.save(productionOrder);
+    return this.findOneById(ctx, id) as Promise<ProductionOrder>;
+  }
+
+  async updateStage(
+    ctx: RequestContext,
+    input: UpdateProductionOrderStageInput
+  ): Promise<ProductionOrder> {
+    const productionOrderRepo = this.connection.getRepository(
+      ctx,
+      ProductionOrder
+    );
+    const { id, stage } = input;
+
+    const productionOrder = await this.findOneById(ctx, id);
+    if (!productionOrder) {
+      throw new Error(`Production order with id ${id} not found`);
     }
 
-    productionOrder.status = status;
-    productionOrder.updatedBy = updatedBy;
-
+    productionOrder.stage = stage;
     await productionOrderRepo.save(productionOrder);
     return this.findOneById(ctx, id) as Promise<ProductionOrder>;
   }
@@ -302,54 +370,8 @@ export class ProductionOrderService {
     return result.affected ? result.affected > 0 : false;
   }
 
-  async createMtoOrder(
-    ctx: RequestContext,
-    groupTitle: string,
-    orders: Omit<CreateProductionOrderInput, "groupId" | "groupTitle">[]
-  ): Promise<ProductionOrder[]> {
-    // Generate a unique group ID
-    const groupId = Date.now();
-
-    const createdOrders: ProductionOrder[] = [];
-
-    for (const orderInput of orders) {
-      const order = await this.create(ctx, {
-        ...orderInput,
-        orderType: ProductionOrderType.MTO,
-        groupId,
-        groupTitle,
-      });
-      createdOrders.push(order);
-    }
-
-    return createdOrders;
-  }
-
-  async createAlterationOrder(
-    ctx: RequestContext,
-    groupTitle: string,
-    orders: Omit<CreateProductionOrderInput, "groupId" | "groupTitle">[]
-  ): Promise<ProductionOrder[]> {
-    // Generate a unique group ID
-    const groupId = Date.now();
-
-    const createdOrders: ProductionOrder[] = [];
-
-    for (const orderInput of orders) {
-      const order = await this.create(ctx, {
-        ...orderInput,
-        orderType: ProductionOrderType.ALTERATION,
-        groupId,
-        groupTitle,
-      });
-      createdOrders.push(order);
-    }
-
-    return createdOrders;
-  }
-
-  // Get orders statistics
-  async getStatistics(
+  // Get orders statistics by status
+  async getStatisticsByStatus(
     ctx: RequestContext,
     tenantId: number
   ): Promise<{ status: ProductionStatus; count: number }[]> {
@@ -364,6 +386,25 @@ export class ProductionOrderService {
       .addSelect("COUNT(order.id)", "count")
       .where("order.tenantId = :tenantId", { tenantId })
       .groupBy("order.status")
+      .getRawMany();
+  }
+
+  // Get orders statistics by stage
+  async getStatisticsByStage(
+    ctx: RequestContext,
+    tenantId: number
+  ): Promise<{ stage: string; count: number }[]> {
+    const productionOrderRepo = this.connection.getRepository(
+      ctx,
+      ProductionOrder
+    );
+
+    return productionOrderRepo
+      .createQueryBuilder("order")
+      .select("order.stage", "stage")
+      .addSelect("COUNT(order.id)", "count")
+      .where("order.tenantId = :tenantId", { tenantId })
+      .groupBy("order.stage")
       .getRawMany();
   }
 }

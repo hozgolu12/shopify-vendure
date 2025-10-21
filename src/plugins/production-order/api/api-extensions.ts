@@ -8,8 +8,14 @@ export const schema = gql`
     productionOrdersByWorkspace(workspaceId: Int!): [ProductionOrder!]!
     productionOrdersByCustomer(customerId: ID!): [ProductionOrder!]!
     productionOrdersByStatus(status: ProductionStatus!): [ProductionOrder!]!
-    productionOrdersByGroup(groupId: Int!): [ProductionOrder!]!
-    productionOrderStatistics(tenantId: Int!): [ProductionOrderStatistic!]!
+    productionOrdersByStage(stage: String!): [ProductionOrder!]!
+    productionOrdersByVendureOrder(vendureOrderId: Int!): [ProductionOrder!]!
+    productionOrderStatisticsByStatus(
+      tenantId: Int!
+    ): [ProductionOrderStatusStatistic!]!
+    productionOrderStatisticsByStage(
+      tenantId: Int!
+    ): [ProductionOrderStageStatistic!]!
   }
 
   extend type Mutation {
@@ -18,15 +24,10 @@ export const schema = gql`
     updateProductionOrderStatus(
       input: UpdateProductionOrderStatusInput!
     ): ProductionOrder!
+    updateProductionOrderStage(
+      input: UpdateProductionOrderStageInput!
+    ): ProductionOrder!
     deleteProductionOrder(id: ID!): DeletionResponse!
-    createMtoOrder(
-      groupTitle: String!
-      orders: [CreateBulkOrderInput!]!
-    ): [ProductionOrder!]!
-    createAlterationOrder(
-      groupTitle: String!
-      orders: [CreateBulkOrderInput!]!
-    ): [ProductionOrder!]!
   }
 
   type ProductionOrder {
@@ -34,32 +35,40 @@ export const schema = gql`
     tenantId: Int!
     workspace: TenantWorkspace!
     workspaceId: Int!
+    vendureOrder: Order
+    vendureOrderId: Int
+    vendureItemId: Int
+    productKit: ProductKit
+    productKitId: Int
     customer: Customer!
     customerId: ID!
     orderType: ProductionOrderType!
-    groupId: Int
-    groupTitle: String
+    productKitTitle: String
     itemCode: String!
     itemTitle: String!
-    status: ProductionStatus!
     itemConfig: JSON!
+    status: ProductionStatus!
+    stage: String!
+    designId: Int
     createdAt: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
-    updatedAt: DateTime!
-    updatedByUser: TenantUser!
-    updatedBy: Int!
     customFields: ProductionOrderCustomFields!
   }
 
-  type ProductionOrderStatistic {
+  type ProductionOrderStatusStatistic {
     status: ProductionStatus!
+    count: Int!
+  }
+
+  type ProductionOrderStageStatistic {
+    stage: String!
     count: Int!
   }
 
   enum ProductionOrderType {
     ALTERATION
-    MTO
+    MADE_TO_ORDER
     CUSTOM
   }
 
@@ -81,26 +90,18 @@ export const schema = gql`
   input CreateProductionOrderInput {
     tenantId: Int!
     workspaceId: Int!
+    vendureOrderId: Int
+    vendureItemId: Int
+    productKitId: Int
     customerId: ID!
     orderType: ProductionOrderType!
-    groupId: Int
-    groupTitle: String
+    productKitTitle: String
     itemCode: String!
     itemTitle: String!
-    status: ProductionStatus
     itemConfig: JSON!
-    createdBy: Int!
-    customFields: ProductionOrderCustomFieldsInput
-  }
-
-  input CreateBulkOrderInput {
-    tenantId: Int!
-    workspaceId: Int!
-    customerId: ID!
-    itemCode: String!
-    itemTitle: String!
     status: ProductionStatus
-    itemConfig: JSON!
+    stage: String
+    designId: Int
     createdBy: Int!
     customFields: ProductionOrderCustomFieldsInput
   }
@@ -108,22 +109,29 @@ export const schema = gql`
   input UpdateProductionOrderInput {
     id: ID!
     workspaceId: Int
+    vendureOrderId: Int
+    vendureItemId: Int
+    productKitId: Int
     customerId: ID
     orderType: ProductionOrderType
-    groupId: Int
-    groupTitle: String
+    productKitTitle: String
     itemCode: String
     itemTitle: String
-    status: ProductionStatus
     itemConfig: JSON
-    updatedBy: Int!
+    status: ProductionStatus
+    stage: String
+    designId: Int
     customFields: ProductionOrderCustomFieldsInput
   }
 
   input UpdateProductionOrderStatusInput {
     id: ID!
     status: ProductionStatus!
-    updatedBy: Int!
+  }
+
+  input UpdateProductionOrderStageInput {
+    id: ID!
+    stage: String!
   }
 
   # Add at least one field to make the input type valid
