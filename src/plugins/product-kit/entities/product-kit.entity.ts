@@ -17,6 +17,7 @@ import {
   ID,
   ProductVariant,
   Channel,
+  Collection,
 } from "@vendure/core";
 import { ProductKitCustomFields } from "./product-kit-custom-fields.entity";
 
@@ -60,6 +61,16 @@ export class ProductKit extends VendureEntity implements HasCustomFields {
   })
   productVariants: ProductVariant[];
 
+  @Column("integer", { nullable: false })
+  productKitPrice: number;
+
+  @ManyToOne(() => ProductVariant, { nullable: false })
+  @JoinColumn({ name: "primaryProductId" })
+  primaryProduct: ProductVariant;
+
+  @Column()
+  primaryProductId: number;
+
   // Many-to-One relationship with Channel
   @ManyToOne(() => Channel, { nullable: false })
   @JoinColumn({ name: "channelId" })
@@ -67,6 +78,13 @@ export class ProductKit extends VendureEntity implements HasCustomFields {
 
   @Column()
   channelId: number;
+
+  @ManyToOne(() => Collection, { nullable: false })
+  @JoinColumn({ name: "collectionId" })
+  collection: Collection;
+
+  @Column()
+  collectionId: number;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -10,6 +10,7 @@ import {
   PaginatedList,
   ProductVariant,
   Channel,
+  Collection,
 } from "@vendure/core";
 import { ProductKit, DiscountType } from "../entities/product-kit.entity";
 
@@ -20,7 +21,10 @@ interface CreateProductKitInput {
   discountType: DiscountType;
   discountValue: number;
   productVariantIds: ID[];
+  productKitPrice: number;
+  primaryProductId: ID; // Required primary product ID
   channelId: ID; // Single channel ID now
+  collectionId: ID; // Required collection ID
   customFields?: any;
 }
 
@@ -32,7 +36,10 @@ interface UpdateProductKitInput {
   discountType?: DiscountType;
   discountValue?: number;
   productVariantIds?: ID[];
+  productKitPrice?: number;
+  primaryProductId?: ID; // Optional primary product update
   channelId?: ID; // Optional channel update
+  collectionId?: ID; // Optional collection update
   customFields?: any;
 }
 
@@ -51,7 +58,12 @@ export class ProductKitService {
   ): Promise<PaginatedList<ProductKit>> {
     return this.listQueryBuilder
       .build(ProductKit, options, {
-        relations: relations || ["productVariants", "channel"],
+        relations: relations || [
+          "productVariants",
+          "primaryProduct",
+          "channel",
+          "collection",
+        ],
         ctx,
       })
       .getManyAndCount()
@@ -68,7 +80,7 @@ export class ProductKitService {
   ): Promise<ProductKit | null> {
     return this.connection.getRepository(ctx, ProductKit).findOne({
       where: { id: id as any },
-      relations: relations || ["productVariants", "channel"],
+      relations: relations || ["productVariants", "channel", "collection"],
     });
   }
 
@@ -80,7 +92,7 @@ export class ProductKitService {
   ): Promise<ProductKit | null> {
     return this.connection.getRepository(ctx, ProductKit).findOne({
       where: { barcode, channelId: channelId as any },
-      relations: relations || ["productVariants", "channel"],
+      relations: relations || ["productVariants", "channel", "collection"],
     });
   }
 
@@ -92,7 +104,7 @@ export class ProductKitService {
   ): Promise<ProductKit | null> {
     return this.connection.getRepository(ctx, ProductKit).findOne({
       where: { itemKitName, channelId: channelId as any },
-      relations: relations || ["productVariants", "channel"],
+      relations: relations || ["productVariants", "channel", "collection"],
     });
   }
 
@@ -103,7 +115,7 @@ export class ProductKitService {
   ): Promise<ProductKit[]> {
     return this.connection.getRepository(ctx, ProductKit).find({
       where: { channelId: channelId as any },
-      relations: relations || ["productVariants", "channel"],
+      relations: relations || ["productVariants", "channel", "collection"],
     });
   }
 
@@ -117,6 +129,7 @@ export class ProductKitService {
       ProductVariant
     );
     const channelRepo = this.connection.getRepository(ctx, Channel);
+    const collectionRepo = this.connection.getRepository(ctx, Collection);
 
     // Check if barcode already exists in the same channel
     const existingKitByBarcode = await this.findByBarcodeAndChannel(
@@ -150,6 +163,24 @@ export class ProductKitService {
       throw new Error(`Channel with id ${input.channelId} not found`);
     }
 
+    // Load collection
+    const collection = await collectionRepo.findOne({
+      where: { id: input.collectionId as any },
+    });
+    if (!collection) {
+      throw new Error(`Collection with id ${input.collectionId} not found`);
+    }
+
+    // Load primary product
+    const primaryProduct = await productVariantRepo.findOne({
+      where: { id: input.primaryProductId as any },
+    });
+    if (!primaryProduct) {
+      throw new Error(
+        `Primary product with id ${input.primaryProductId} not found`
+      );
+    }
+
     // Create main product kit
     const productKit = productKitRepo.create({
       barcode: input.barcode,
@@ -157,8 +188,13 @@ export class ProductKitService {
       description: input.description,
       discountType: input.discountType,
       discountValue: input.discountValue,
+      productKitPrice: input.productKitPrice,
+      primaryProduct,
+      primaryProductId: input.primaryProductId as number,
       channel,
       channelId: input.channelId as number,
+      collection,
+      collectionId: input.collectionId as number,
     });
 
     // Load product variants
@@ -194,9 +230,18 @@ export class ProductKitService {
       ProductVariant
     );
     const channelRepo = this.connection.getRepository(ctx, Channel);
+    const collectionRepo = this.connection.getRepository(ctx, Collection);
 
-    const { id, customFields, productVariantIds, channelId, ...updateData } =
-      input;
+    const {
+      id,
+      customFields,
+      productVariantIds,
+      productKitPrice,
+      primaryProductId,
+      channelId,
+      collectionId,
+      ...updateData
+    } = input;
 
     const productKit = await this.findOneById(ctx, id);
     if (!productKit) {
@@ -246,6 +291,32 @@ export class ProductKitService {
       productKit.channelId = channelId as number;
     }
 
+    // Update collection if provided
+    if (collectionId) {
+      const collection = await collectionRepo.findOne({
+        where: { id: collectionId as any },
+      });
+      if (!collection) {
+        throw new Error(`Collection with id ${collectionId} not found`);
+      }
+      productKit.collection = collection;
+      productKit.collectionId = collectionId as number;
+    }
+
+    // Update primary product if provided
+    if (primaryProductId) {
+      const primaryProduct = await productVariantRepo.findOne({
+        where: { id: primaryProductId as any },
+      });
+      if (!primaryProduct) {
+        throw new Error(
+          `Primary product with id ${primaryProductId} not found`
+        );
+      }
+      productKit.primaryProduct = primaryProduct;
+      productKit.primaryProductId = primaryProductId as number;
+    }
+
     // Update basic fields
     Object.assign(productKit, updateData);
 
@@ -255,6 +326,11 @@ export class ProductKitService {
         productVariantIds
       );
       productKit.productVariants = productVariants;
+    }
+
+    // Update product kit price if provided
+    if (productKitPrice !== undefined) {
+      productKit.productKitPrice = productKitPrice;
     }
 
     await productKitRepo.save(productKit);

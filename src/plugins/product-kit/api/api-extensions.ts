@@ -31,8 +31,13 @@ export const schema = gql`
     discountType: DiscountType!
     discountValue: Float!
     productVariants: [ProductVariant!]!
+    productKitPrice: Int!
+    primaryProduct: ProductVariant!
+    primaryProductId: ID!
     channel: Channel!
     channelId: ID!
+    collection: Collection!
+    collectionId: ID!
     createdAt: DateTime!
     updatedAt: DateTime!
     customFields: ProductKitCustomFields!
@@ -55,7 +60,10 @@ export const schema = gql`
     discountType: DiscountType!
     discountValue: Float!
     productVariantIds: [ID!]!
+    productKitPrice: Int!
+    primaryProductId: ID! # Required primary product ID
     channelId: ID! # Required channel ID
+    collectionId: ID! # Required collection ID
     customFields: ProductKitCustomFieldsInput
   }
 
@@ -67,7 +75,10 @@ export const schema = gql`
     discountType: DiscountType
     discountValue: Float
     productVariantIds: [ID!]
+    productKitPrice: Int
+    primaryProductId: ID # Optional primary product update
     channelId: ID # Optional channel update
+    collectionId: ID # Optional collection update
     customFields: ProductKitCustomFieldsInput
   }
 
