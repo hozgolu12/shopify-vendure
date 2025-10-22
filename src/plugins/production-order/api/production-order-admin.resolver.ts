@@ -9,7 +9,7 @@ import {
 } from "@vendure/core";
 import { ProductionOrderService } from "../services/production-order.service";
 import { ProductionOrder } from "../entities/production-order.entity";
-import { ProductionStatus } from "../constants";
+import { ProductionStatus } from "../types";
 
 @Resolver()
 export class ProductionOrderResolver {

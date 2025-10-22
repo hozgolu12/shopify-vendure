@@ -12,7 +12,7 @@ import {
   Order,
 } from "@vendure/core";
 import { ProductionOrder } from "../entities/production-order.entity";
-import { ProductionOrderType, ProductionStatus } from "../constants";
+import { ProductionOrderType, ProductionStatus } from "../types";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
 import { ProductKit } from "../../product-kit/entities/product-kit.entity";

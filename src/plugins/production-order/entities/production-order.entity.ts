@@ -20,7 +20,7 @@ import { ProductionOrderCustomFields } from "./production-order-custom-fields.en
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
 import { ProductKit } from "../../product-kit/entities/product-kit.entity";
-import { ProductionOrderType, ProductionStatus } from "../constants";
+import { ProductionOrderType, ProductionStatus } from "../types";
 
 @Entity()
 export class ProductionOrder extends VendureEntity implements HasCustomFields {

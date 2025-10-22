@@ -68,8 +68,8 @@ export const schema = gql`
 
   enum ProductionOrderType {
     ALTERATION
-    MADE_TO_ORDER
-    CUSTOM
+    PRODUCTION
+    SAMPLE
   }
 
   enum ProductionStatus {

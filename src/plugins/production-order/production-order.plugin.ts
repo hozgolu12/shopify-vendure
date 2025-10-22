@@ -17,6 +17,10 @@ export interface ProductionOrderPluginOptions {
     schema,
     resolvers: [ProductionOrderResolver],
   },
+  shopApiExtensions: {
+    schema,
+    resolvers: [ProductionOrderResolver],
+  },
   compatibility: "^3.0.0",
 })
 export class ProductionOrderPlugin {

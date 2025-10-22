@@ -29,6 +29,7 @@ import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
 import { productTypeSchema } from "./schema/product/product-type.schema";
 import { ProductionOrderPlugin } from "./plugins/production-order/production-order.plugin";
 import { itemConfigSchema } from "./schema/product/item-config.schema";
+import { ProductionOrderTaskPlugin } from "./plugins/production-order-task/production-order-task.plugin";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -148,7 +149,7 @@ export const config: VendureConfig = {
       port: 3002,
       app: compileUiExtensions({
         outputPath: path.join(__dirname, "../admin-ui"),
-        extensions: [CustomerRelationPlugin.ui],
+        extensions: [CustomerRelationPlugin.ui, ProductKitPlugin.ui],
         devMode: true,
       }),
     }),
@@ -159,5 +160,6 @@ export const config: VendureConfig = {
     WorkspacePlugin.init({}),
     ProductKitPlugin.init({}),
     ProductionOrderPlugin.init({}),
+    ProductionOrderTaskPlugin.init({}),
   ],
 };

@@ -1,10 +1,11 @@
 import { PluginCommonModule, Type, VendurePlugin } from "@vendure/core";
-import { ProductKit } from "./entities/product-kit.entity";
-import { ProductKitCustomFields } from "./entities/product-kit-custom-fields.entity";
-import { ProductKitService } from "./services/product-kit.service";
-import { ProductKitResolver } from "./api/product-kit-admin.resolver";
+import { AdminUiExtension } from '@vendure/ui-devkit/compiler';
+import * as path from 'path';
 import { schema } from "./api/api-extensions";
-
+import { ProductKitResolver } from "./api/product-kit-admin.resolver";
+import { ProductKitCustomFields } from "./entities/product-kit-custom-fields.entity";
+import { ProductKit } from "./entities/product-kit.entity";
+import { ProductKitService } from "./services/product-kit.service";
 export interface ProductKitPluginOptions {
   // Plugin-specific options can be added here
 }
@@ -30,4 +31,11 @@ export class ProductKitPlugin {
     this.options = options;
     return ProductKitPlugin;
   }
+
+    static ui: AdminUiExtension = {
+        id: 'product-kit-ui',
+        extensionPath: path.join(__dirname, 'ui'),
+        routes: [{ route: 'product-kit', filePath: 'routes.ts' }],
+        providers: ['providers.ts'],
+    };
 }
