@@ -87,8 +87,8 @@ export const schema = gql`
   }
 
   enum RateType {
-    HOURLY
-    DAILY
+    hourly
+    daily
   }
 
   # Add at least one field to make the type valid

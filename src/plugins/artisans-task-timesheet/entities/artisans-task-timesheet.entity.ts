@@ -14,11 +14,6 @@ import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
 import { ProductionOrder } from "../../production-order/entities/production-order.entity";
 
-export enum RateType {
-  HOURLY = "hourly",
-  DAILY = "daily",
-}
-
 @Entity()
 export class ArtisanTaskTimesheet
   extends VendureEntity

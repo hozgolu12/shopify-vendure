@@ -9,10 +9,7 @@ import {
   RelationPaths,
   PaginatedList,
 } from "@vendure/core";
-import {
-  ArtisanTaskTimesheet,
-  RateType,
-} from "../entities/artisans-task-timesheet.entity";
+import { ArtisanTaskTimesheet } from "../entities/artisans-task-timesheet.entity";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
 import { ProductionOrder } from "../../production-order/entities/production-order.entity";
@@ -24,7 +21,7 @@ interface CreateArtisanTaskTimesheetInput {
   startDate: Date;
   endDate?: Date;
   rate: number;
-  rateType: RateType;
+  rateType: "hourly" | "daily";
   productionOrderId?: number;
   rework?: boolean;
   productive?: boolean;
@@ -40,7 +37,7 @@ interface UpdateArtisanTaskTimesheetInput {
   startDate?: Date;
   endDate?: Date;
   rate?: number;
-  rateType?: RateType;
+  rateType?: "hourly" | "daily";
   productionOrderId?: number;
   rework?: boolean;
   productive?: boolean;
