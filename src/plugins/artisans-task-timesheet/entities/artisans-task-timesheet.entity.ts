@@ -43,10 +43,10 @@ export class ArtisanTaskTimesheet
   artisanId: number;
 
   // Time tracking
-  @Column({ type: "date" })
+  @Column({ type: "timestamp with time zone" })
   startDate: Date;
 
-  @Column({ type: "date", nullable: true })
+  @Column({ type: "timestamp with time zone", nullable: true })
   endDate: Date;
 
   // Time spent (calculated automatically)
