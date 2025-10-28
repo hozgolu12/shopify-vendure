@@ -64,10 +64,10 @@ export class ArtisanTaskTimesheet
 
   @Column({
     type: "enum",
-    enum: RateType,
-    default: RateType.HOURLY,
+    enum: ["hourly", "daily"],
+    default: "hourly",
   })
-  rateType: RateType;
+  rateType: "hourly" | "daily";
 
   // Production Order relationship
   @ManyToOne(() => ProductionOrder, { nullable: true })
@@ -159,9 +159,9 @@ export class ArtisanTaskTimesheet
   calculateTotalCost(): number {
     const timeSpentHours = this.getTimeSpentInHours();
 
-    if (this.rateType === RateType.HOURLY) {
+    if (this.rateType === "hourly") {
       return this.rate * timeSpentHours;
-    } else if (this.rateType === RateType.DAILY) {
+    } else if (this.rateType === "daily") {
       const days = timeSpentHours / 8; // Assuming 8-hour work day
       return this.rate * days;
     }
