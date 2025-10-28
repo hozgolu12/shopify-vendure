@@ -30,6 +30,7 @@ import { productTypeSchema } from "./schema/product/product-type.schema";
 import { ProductionOrderPlugin } from "./plugins/production-order/production-order.plugin";
 import { itemConfigSchema } from "./schema/product/item-config.schema";
 import { ProductionOrderTaskPlugin } from "./plugins/production-order-task/production-order-task.plugin";
+import { ArtisanTaskTimesheetPlugin } from "./plugins/artisans-task-timesheet/artisans-task-timesheet.plugin";
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -161,5 +162,6 @@ export const config: VendureConfig = {
     ProductKitPlugin.init({}),
     ProductionOrderPlugin.init({}),
     ProductionOrderTaskPlugin.init({}),
+    ArtisanTaskTimesheetPlugin.init({}),
   ],
 };

@@ -11,5 +11,6 @@
       "database": "vendure_db",
       "username": "vendure_user"
     }
-  ]
+  ],
+  "cSpell.words": ["timesheet"]
 }
