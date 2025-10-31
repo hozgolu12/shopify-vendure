@@ -26,6 +26,9 @@ export class ArtisanTaskTimesheet
   @Column()
   tenantId: number;
 
+  @Column()
+  tenantMongoId: string;
+
   // Workspace relationship
   @ManyToOne(() => Workspace)
   @JoinColumn({ name: "workspaceId" })
@@ -34,6 +37,9 @@ export class ArtisanTaskTimesheet
   @Column()
   workspaceId: number;
 
+  @Column()
+  workspaceMongoId: string;
+
   // Artisan relationship (User)
   @ManyToOne(() => TenantUser)
   @JoinColumn({ name: "artisanId" })
@@ -41,6 +47,9 @@ export class ArtisanTaskTimesheet
 
   @Column()
   artisanId: number;
+
+  @Column()
+  artisanMongoId: string;
 
   // Time tracking
   @Column({ type: "timestamp with time zone" })
@@ -93,6 +102,9 @@ export class ArtisanTaskTimesheet
 
   @Column()
   createdBy: number;
+
+  @Column()
+  createdByMongoId: string;
 
   @Column((type) => ArtisanTaskTimesheetCustomFields)
   customFields: ArtisanTaskTimesheetCustomFields;

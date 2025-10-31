@@ -7,10 +7,22 @@ export const schema = gql`
       options: ArtisanTaskTimesheetListOptions
     ): ArtisanTaskTimesheetList!
     artisanTaskTimesheetsByTenant(tenantId: Int!): [ArtisanTaskTimesheet!]!
+    artisanTaskTimesheetsByTenantMongoId(
+      tenantMongoId: String!
+    ): [ArtisanTaskTimesheet!]!
     artisanTaskTimesheetsByWorkspace(
       workspaceId: Int!
     ): [ArtisanTaskTimesheet!]!
+    artisanTaskTimesheetsByWorkspaceMongoId(
+      workspaceMongoId: String!
+    ): [ArtisanTaskTimesheet!]!
     artisanTaskTimesheetsByArtisan(artisanId: Int!): [ArtisanTaskTimesheet!]!
+    artisanTaskTimesheetsByArtisanMongoId(
+      artisanMongoId: String!
+    ): [ArtisanTaskTimesheet!]!
+    artisanTaskTimesheetsByCreatedByMongoId(
+      createdByMongoId: String!
+    ): [ArtisanTaskTimesheet!]!
     artisanTaskTimesheetsByProductionOrder(
       productionOrderId: Int!
     ): [ArtisanTaskTimesheet!]!
@@ -47,10 +59,13 @@ export const schema = gql`
   type ArtisanTaskTimesheet {
     id: ID!
     tenantId: Int!
+    tenantMongoId: String!
     workspace: TenantWorkspace!
     workspaceId: Int!
+    workspaceMongoId: String!
     artisan: TenantUser!
     artisanId: Int!
+    artisanMongoId: String!
     startDate: DateTime!
     endDate: DateTime
     timeSpent: String
@@ -64,6 +79,7 @@ export const schema = gql`
     created: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
+    createdByMongoId: String!
     totalCost: Float!
     timeSpentInHours: Float!
     customFields: ArtisanTaskTimesheetCustomFields!
@@ -98,8 +114,11 @@ export const schema = gql`
 
   input CreateArtisanTaskTimesheetInput {
     tenantId: Int!
+    tenantMongoId: String!
     workspaceId: Int!
+    workspaceMongoId: String!
     artisanId: Int!
+    artisanMongoId: String!
     startDate: DateTime!
     endDate: DateTime
     rate: Float!
@@ -109,6 +128,7 @@ export const schema = gql`
     productive: Boolean
     reason: String
     createdBy: Int!
+    createdByMongoId: String!
     customFields: ArtisanTaskTimesheetCustomFieldsInput
   }
 

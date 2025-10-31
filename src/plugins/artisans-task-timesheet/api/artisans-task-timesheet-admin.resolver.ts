@@ -80,6 +80,24 @@ export class ArtisanTaskTimesheetResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async artisanTaskTimesheetsByTenantMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { tenantMongoId: string }
+  ): Promise<ArtisanTaskTimesheetWithCalculatedFields[]> {
+    const timesheets =
+      await this.artisanTaskTimesheetService.findByTenantMongoId(
+        ctx,
+        args.tenantMongoId
+      );
+    return timesheets.map((timesheet) => ({
+      ...timesheet,
+      totalCost: timesheet.calculateTotalCost(),
+      timeSpentInHours: timesheet.getTimeSpentInHours(),
+    }));
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
   async artisanTaskTimesheetsByWorkspace(
     @Ctx() ctx: RequestContext,
     @Args() args: { workspaceId: number }
@@ -97,6 +115,24 @@ export class ArtisanTaskTimesheetResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async artisanTaskTimesheetsByWorkspaceMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { workspaceMongoId: string }
+  ): Promise<ArtisanTaskTimesheetWithCalculatedFields[]> {
+    const timesheets =
+      await this.artisanTaskTimesheetService.findByWorkspaceMongoId(
+        ctx,
+        args.workspaceMongoId
+      );
+    return timesheets.map((timesheet) => ({
+      ...timesheet,
+      totalCost: timesheet.calculateTotalCost(),
+      timeSpentInHours: timesheet.getTimeSpentInHours(),
+    }));
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
   async artisanTaskTimesheetsByArtisan(
     @Ctx() ctx: RequestContext,
     @Args() args: { artisanId: number }
@@ -105,6 +141,42 @@ export class ArtisanTaskTimesheetResolver {
       ctx,
       args.artisanId
     );
+    return timesheets.map((timesheet) => ({
+      ...timesheet,
+      totalCost: timesheet.calculateTotalCost(),
+      timeSpentInHours: timesheet.getTimeSpentInHours(),
+    }));
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async artisanTaskTimesheetsByArtisanMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { artisanMongoId: string }
+  ): Promise<ArtisanTaskTimesheetWithCalculatedFields[]> {
+    const timesheets =
+      await this.artisanTaskTimesheetService.findByArtisanMongoId(
+        ctx,
+        args.artisanMongoId
+      );
+    return timesheets.map((timesheet) => ({
+      ...timesheet,
+      totalCost: timesheet.calculateTotalCost(),
+      timeSpentInHours: timesheet.getTimeSpentInHours(),
+    }));
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async artisanTaskTimesheetsByCreatedByMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { createdByMongoId: string }
+  ): Promise<ArtisanTaskTimesheetWithCalculatedFields[]> {
+    const timesheets =
+      await this.artisanTaskTimesheetService.findByCreatedByMongoId(
+        ctx,
+        args.createdByMongoId
+      );
     return timesheets.map((timesheet) => ({
       ...timesheet,
       totalCost: timesheet.calculateTotalCost(),

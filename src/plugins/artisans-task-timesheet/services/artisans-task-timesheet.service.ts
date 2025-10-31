@@ -16,8 +16,11 @@ import { ProductionOrder } from "../../production-order/entities/production-orde
 
 interface CreateArtisanTaskTimesheetInput {
   tenantId: number;
+  tenantMongoId: string;
   workspaceId: number;
+  workspaceMongoId: string;
   artisanId: number;
+  artisanMongoId: string;
   startDate: Date;
   endDate?: Date;
   rate: number;
@@ -27,6 +30,7 @@ interface CreateArtisanTaskTimesheetInput {
   productive?: boolean;
   reason?: string;
   createdBy: number;
+  createdByMongoId: string;
   customFields?: any;
 }
 
@@ -108,6 +112,18 @@ export class ArtisanTaskTimesheetService {
     });
   }
 
+  async findByTenantMongoId(
+    ctx: RequestContext,
+    tenantMongoId: string,
+    relations?: RelationPaths<ArtisanTaskTimesheet>
+  ): Promise<ArtisanTaskTimesheet[]> {
+    return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
+      where: { tenantMongoId },
+      relations: relations || ["workspace", "artisan", "productionOrder"],
+      order: { startDate: "DESC" },
+    });
+  }
+
   async findByWorkspace(
     ctx: RequestContext,
     workspaceId: number,
@@ -115,6 +131,18 @@ export class ArtisanTaskTimesheetService {
   ): Promise<ArtisanTaskTimesheet[]> {
     return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
       where: { workspaceId },
+      relations: relations || ["artisan", "productionOrder", "createdByUser"],
+      order: { startDate: "DESC" },
+    });
+  }
+
+  async findByWorkspaceMongoId(
+    ctx: RequestContext,
+    workspaceMongoId: string,
+    relations?: RelationPaths<ArtisanTaskTimesheet>
+  ): Promise<ArtisanTaskTimesheet[]> {
+    return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
+      where: { workspaceMongoId },
       relations: relations || ["artisan", "productionOrder", "createdByUser"],
       order: { startDate: "DESC" },
     });
@@ -128,6 +156,30 @@ export class ArtisanTaskTimesheetService {
     return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
       where: { artisanId },
       relations: relations || ["workspace", "productionOrder", "createdByUser"],
+      order: { startDate: "DESC" },
+    });
+  }
+
+  async findByArtisanMongoId(
+    ctx: RequestContext,
+    artisanMongoId: string,
+    relations?: RelationPaths<ArtisanTaskTimesheet>
+  ): Promise<ArtisanTaskTimesheet[]> {
+    return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
+      where: { artisanMongoId },
+      relations: relations || ["workspace", "productionOrder", "createdByUser"],
+      order: { startDate: "DESC" },
+    });
+  }
+
+  async findByCreatedByMongoId(
+    ctx: RequestContext,
+    createdByMongoId: string,
+    relations?: RelationPaths<ArtisanTaskTimesheet>
+  ): Promise<ArtisanTaskTimesheet[]> {
+    return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
+      where: { createdByMongoId },
+      relations: relations || ["workspace", "artisan", "productionOrder"],
       order: { startDate: "DESC" },
     });
   }
@@ -231,8 +283,11 @@ export class ArtisanTaskTimesheetService {
 
     const timesheet = timesheetRepo.create({
       tenantId: input.tenantId,
+      tenantMongoId: input.tenantMongoId,
       workspaceId: input.workspaceId,
+      workspaceMongoId: input.workspaceMongoId,
       artisanId: input.artisanId,
+      artisanMongoId: input.artisanMongoId,
       startDate: input.startDate,
       endDate: input.endDate,
       rate: input.rate,
@@ -242,6 +297,7 @@ export class ArtisanTaskTimesheetService {
       productive: input.productive !== undefined ? input.productive : true,
       reason: input.reason,
       createdBy: input.createdBy,
+      createdByMongoId: input.createdByMongoId,
     });
 
     const savedTimesheet = await timesheetRepo.save(timesheet);

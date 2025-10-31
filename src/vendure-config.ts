@@ -96,7 +96,7 @@ export const config: VendureConfig = {
   // need to be updated. See the "Migrations" section in README.md.
   customFields: {
     Product: [productTypeSchema, itemConfigSchema],
-    Channel: [productKitsSchema, orderKitsSchema],
+    // Channel: [productKitsSchema, orderKitsSchema],
     Customer: [measurementsSchema],
     // TenantUser: [companySchema, locationSchema, workspaceSchema],
   },
