@@ -100,6 +100,18 @@ export class ProductionOrderTaskService {
     });
   }
 
+  async findByTenantMongoId(
+    ctx: RequestContext,
+    tenantMongoId: string,
+    relations?: RelationPaths<ProductionOrderTask>
+  ): Promise<ProductionOrderTask[]> {
+    return this.connection.getRepository(ctx, ProductionOrderTask).find({
+      where: { tenantMongoId },
+      relations: relations || ["workspace", "productionOrder", "createdByUser"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
   async findByWorkspace(
     ctx: RequestContext,
     workspaceId: number,
@@ -107,6 +119,22 @@ export class ProductionOrderTaskService {
   ): Promise<ProductionOrderTask[]> {
     return this.connection.getRepository(ctx, ProductionOrderTask).find({
       where: { workspaceId },
+      relations: relations || [
+        "productionOrder",
+        "createdByUser",
+        "supervisorUser",
+      ],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async findByWorkspaceMongoId(
+    ctx: RequestContext,
+    workspaceMongoId: string,
+    relations?: RelationPaths<ProductionOrderTask>
+  ): Promise<ProductionOrderTask[]> {
+    return this.connection.getRepository(ctx, ProductionOrderTask).find({
+      where: { workspaceMongoId },
       relations: relations || [
         "productionOrder",
         "createdByUser",
@@ -145,6 +173,25 @@ export class ProductionOrderTaskService {
       .getMany();
   }
 
+  async findByAssigneesMongoId(
+    ctx: RequestContext,
+    assigneeMongoId: string,
+    relations?: RelationPaths<ProductionOrderTask>
+  ): Promise<ProductionOrderTask[]> {
+    const taskRepo = this.connection.getRepository(ctx, ProductionOrderTask);
+
+    return taskRepo
+      .createQueryBuilder("task")
+      .where("JSON_CONTAINS(task.assigneesMongoId, :assigneeMongoId)", {
+        assigneeMongoId: JSON.stringify(assigneeMongoId),
+      })
+      .leftJoinAndSelect("task.productionOrder", "productionOrder")
+      .leftJoinAndSelect("task.createdByUser", "createdByUser")
+      .leftJoinAndSelect("task.supervisorUser", "supervisorUser")
+      .orderBy("task.createdAt", "DESC")
+      .getMany();
+  }
+
   async findBySupervisor(
     ctx: RequestContext,
     supervisorId: number,
@@ -153,6 +200,34 @@ export class ProductionOrderTaskService {
     return this.connection.getRepository(ctx, ProductionOrderTask).find({
       where: { supervisor: supervisorId },
       relations: relations || ["workspace", "productionOrder", "createdByUser"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async findBySupervisorMongoId(
+    ctx: RequestContext,
+    supervisorMongoId: string,
+    relations?: RelationPaths<ProductionOrderTask>
+  ): Promise<ProductionOrderTask[]> {
+    return this.connection.getRepository(ctx, ProductionOrderTask).find({
+      where: { supervisorMongoId },
+      relations: relations || ["workspace", "productionOrder", "createdByUser"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async findByCreatedByMongoId(
+    ctx: RequestContext,
+    createdByMongoId: string,
+    relations?: RelationPaths<ProductionOrderTask>
+  ): Promise<ProductionOrderTask[]> {
+    return this.connection.getRepository(ctx, ProductionOrderTask).find({
+      where: { createdByMongoId },
+      relations: relations || [
+        "workspace",
+        "productionOrder",
+        "supervisorUser",
+      ],
       order: { createdAt: "DESC" },
     });
   }
@@ -232,16 +307,21 @@ export class ProductionOrderTaskService {
     const task = taskRepo.create({
       parentId: input.parentId,
       tenantId: input.tenantId,
+      tenantMongoId: input.tenantMongoId,
       workspaceId: input.workspaceId,
+      workspaceMongoId: input.workspaceMongoId,
       productionOrderId: input.productionOrderId,
       status: input.status || TaskStatus.TODO,
       startDate: input.startDate,
       endDate: input.endDate,
       assignees: input.assignees || [],
+      assigneesMongoId: input.assigneesMongoId || [],
       supervisor: input.supervisor,
+      supervisorMongoId: input.supervisorMongoId,
       dependencies: input.dependencies || [],
       remarks: input.remarks,
       createdBy: input.createdBy,
+      createdByMongoId: input.createdByMongoId,
     });
 
     const savedTask = await taskRepo.save(task);

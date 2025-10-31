@@ -5,7 +5,7 @@ import { ID } from "@vendure/core";
  * The plugin can be configured using the following options:
  */
 export interface PluginInitOptions {
-    exampleOption?: string;
+  exampleOption?: string;
 }
 
 export enum TaskStatus {
@@ -15,20 +15,24 @@ export enum TaskStatus {
   DONE = "done",
 }
 
-
 export interface CreateProductionOrderTaskInput {
   parentId?: number;
   tenantId: number;
+  tenantMongoId: string;
   workspaceId: number;
+  workspaceMongoId: string;
   productionOrderId: number;
   status?: TaskStatus;
   startDate?: Date;
   endDate?: Date;
   assignees?: number[];
+  assigneesMongoId?: string[];
   supervisor?: number;
+  supervisorMongoId?: string;
   dependencies?: number[];
   remarks?: string;
   createdBy: number;
+  createdByMongoId: string;
   customFields?: any;
 }
 

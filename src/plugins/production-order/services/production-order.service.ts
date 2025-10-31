@@ -19,7 +19,9 @@ import { ProductKit } from "../../product-kit/entities/product-kit.entity";
 
 interface CreateProductionOrderInput {
   tenantId: number;
+  tenantMongoId: string;
   workspaceId: number;
+  workspaceMongoId: string;
   vendureOrderId?: number;
   vendureItemId?: number;
   productKitId?: number;
@@ -129,6 +131,23 @@ export class ProductionOrderService {
     });
   }
 
+  async findByTenantMongoId(
+    ctx: RequestContext,
+    tenantMongoId: string,
+    relations?: RelationPaths<ProductionOrder>
+  ): Promise<ProductionOrder[]> {
+    return this.connection.getRepository(ctx, ProductionOrder).find({
+      where: { tenantMongoId },
+      relations: relations || [
+        "workspace",
+        "customer",
+        "createdByUser",
+        "vendureOrder",
+      ],
+      order: { createdAt: "DESC" },
+    });
+  }
+
   async findByWorkspace(
     ctx: RequestContext,
     workspaceId: number,
@@ -136,6 +155,18 @@ export class ProductionOrderService {
   ): Promise<ProductionOrder[]> {
     return this.connection.getRepository(ctx, ProductionOrder).find({
       where: { workspaceId },
+      relations: relations || ["customer", "createdByUser", "vendureOrder"],
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async findByWorkspaceMongoId(
+    ctx: RequestContext,
+    workspaceMongoId: string,
+    relations?: RelationPaths<ProductionOrder>
+  ): Promise<ProductionOrder[]> {
+    return this.connection.getRepository(ctx, ProductionOrder).find({
+      where: { workspaceMongoId },
       relations: relations || ["customer", "createdByUser", "vendureOrder"],
       order: { createdAt: "DESC" },
     });
@@ -261,7 +292,9 @@ export class ProductionOrderService {
 
     const productionOrder = productionOrderRepo.create({
       tenantId: input.tenantId,
+      tenantMongoId: input.tenantMongoId,
       workspaceId: input.workspaceId,
+      workspaceMongoId: input.workspaceMongoId,
       vendureOrderId: input.vendureOrderId,
       vendureItemId: input.vendureItemId,
       productKitId: input.productKitId,

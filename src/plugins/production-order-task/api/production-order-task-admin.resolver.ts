@@ -8,9 +8,7 @@ import {
   Transaction,
 } from "@vendure/core";
 import { ProductionOrderTaskService } from "../services/production-order-task.service";
-import {
-  ProductionOrderTask,
-} from "../entities/production-order-task.entity";
+import { ProductionOrderTask } from "../entities/production-order-task.entity";
 import { TaskStatus } from "../types";
 
 @Resolver()
@@ -58,6 +56,18 @@ export class ProductionOrderTaskResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderTasksByTenantMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { tenantMongoId: string }
+  ): Promise<ProductionOrderTask[]> {
+    return this.productionOrderTaskService.findByTenantMongoId(
+      ctx,
+      args.tenantMongoId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
   async productionOrderTasksByWorkspace(
     @Ctx() ctx: RequestContext,
     @Args() args: { workspaceId: number }
@@ -65,6 +75,18 @@ export class ProductionOrderTaskResolver {
     return this.productionOrderTaskService.findByWorkspace(
       ctx,
       args.workspaceId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderTasksByWorkspaceMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { workspaceMongoId: string }
+  ): Promise<ProductionOrderTask[]> {
+    return this.productionOrderTaskService.findByWorkspaceMongoId(
+      ctx,
+      args.workspaceMongoId
     );
   }
 
@@ -88,6 +110,18 @@ export class ProductionOrderTaskResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderTasksByAssigneesMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { assigneeMongoId: string }
+  ): Promise<ProductionOrderTask[]> {
+    return this.productionOrderTaskService.findByAssigneesMongoId(
+      ctx,
+      args.assigneeMongoId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
   async productionOrderTasksBySupervisor(
     @Ctx() ctx: RequestContext,
     @Args() args: { supervisorId: number }
@@ -95,6 +129,30 @@ export class ProductionOrderTaskResolver {
     return this.productionOrderTaskService.findBySupervisor(
       ctx,
       args.supervisorId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderTasksBySupervisorMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { supervisorMongoId: string }
+  ): Promise<ProductionOrderTask[]> {
+    return this.productionOrderTaskService.findBySupervisorMongoId(
+      ctx,
+      args.supervisorMongoId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrderTasksByCreatedByMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { createdByMongoId: string }
+  ): Promise<ProductionOrderTask[]> {
+    return this.productionOrderTaskService.findByCreatedByMongoId(
+      ctx,
+      args.createdByMongoId
     );
   }
 

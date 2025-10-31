@@ -34,6 +34,9 @@ export class ProductionOrderTask
   @Column()
   tenantId: number;
 
+  @Column()
+  tenantMongoId: string;
+
   // Workspace relationship
   @ManyToOne(() => Workspace)
   @JoinColumn({ name: "workspaceId" })
@@ -41,6 +44,9 @@ export class ProductionOrderTask
 
   @Column()
   workspaceId: number;
+
+  @Column()
+  workspaceMongoId: string;
 
   // Production Order relationship
   @ManyToOne(() => ProductionOrder)
@@ -69,6 +75,9 @@ export class ProductionOrderTask
   @Column("simple-json", { nullable: true })
   assignees: number[];
 
+  @Column("simple-json", { nullable: true })
+  assigneesMongoId: string[];
+
   // Supervisor relationship
   @ManyToOne(() => TenantUser, { nullable: true })
   @JoinColumn({ name: "supervisor" })
@@ -76,6 +85,9 @@ export class ProductionOrderTask
 
   @Column({ nullable: true })
   supervisor: number;
+
+  @Column({ nullable: true })
+  supervisorMongoId: string;
 
   // Dependencies (JSON array of task IDs)
   @Column("simple-json", { nullable: true })
@@ -95,6 +107,9 @@ export class ProductionOrderTask
 
   @Column()
   createdBy: number;
+
+  @Column()
+  createdByMongoId: string;
 
   @Column((type) => ProductionOrderTaskCustomFields)
   customFields: ProductionOrderTaskCustomFields;

@@ -5,7 +5,11 @@ export const schema = gql`
     productionOrder(id: ID!): ProductionOrder
     productionOrders(options: ProductionOrderListOptions): ProductionOrderList!
     productionOrdersByTenant(tenantId: Int!): [ProductionOrder!]!
+    productionOrdersByTenantMongoId(tenantMongoId: String!): [ProductionOrder!]!
     productionOrdersByWorkspace(workspaceId: Int!): [ProductionOrder!]!
+    productionOrdersByWorkspaceMongoId(
+      workspaceMongoId: String!
+    ): [ProductionOrder!]!
     productionOrdersByCustomer(customerId: ID!): [ProductionOrder!]!
     productionOrdersByStatus(status: ProductionStatus!): [ProductionOrder!]!
     productionOrdersByStage(stage: String!): [ProductionOrder!]!
@@ -33,8 +37,10 @@ export const schema = gql`
   type ProductionOrder {
     id: ID!
     tenantId: Int!
+    tenantMongoId: String!
     workspace: TenantWorkspace!
     workspaceId: Int!
+    workspaceMongoId: String!
     vendureOrder: Order
     vendureOrderId: Int
     vendureItemId: Int
@@ -89,7 +95,9 @@ export const schema = gql`
 
   input CreateProductionOrderInput {
     tenantId: Int!
+    tenantMongoId: String!
     workspaceId: Int!
+    workspaceMongoId: String!
     vendureOrderId: Int
     vendureItemId: Int
     productKitId: Int

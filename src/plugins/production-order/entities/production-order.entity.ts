@@ -31,6 +31,9 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column()
   tenantId: number;
 
+  @Column()
+  tenantMongoId: string;
+
   // Workspace relationship
   @ManyToOne(() => Workspace)
   @JoinColumn({ name: "workspaceId" })
@@ -38,6 +41,9 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
 
   @Column()
   workspaceId: number;
+
+  @Column()
+  workspaceMongoId: string;
 
   // Vendure Order relationship
   @ManyToOne(() => Order, { nullable: true })

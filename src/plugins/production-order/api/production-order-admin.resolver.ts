@@ -44,11 +44,35 @@ export class ProductionOrderResolver {
 
   @Query()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrdersByTenantMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { tenantMongoId: string }
+  ): Promise<ProductionOrder[]> {
+    return this.productionOrderService.findByTenantMongoId(
+      ctx,
+      args.tenantMongoId
+    );
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
   async productionOrdersByWorkspace(
     @Ctx() ctx: RequestContext,
     @Args() args: { workspaceId: number }
   ): Promise<ProductionOrder[]> {
     return this.productionOrderService.findByWorkspace(ctx, args.workspaceId);
+  }
+
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async productionOrdersByWorkspaceMongoId(
+    @Ctx() ctx: RequestContext,
+    @Args() args: { workspaceMongoId: string }
+  ): Promise<ProductionOrder[]> {
+    return this.productionOrderService.findByWorkspaceMongoId(
+      ctx,
+      args.workspaceMongoId
+    );
   }
 
   @Query()

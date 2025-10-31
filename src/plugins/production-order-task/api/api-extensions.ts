@@ -10,11 +10,26 @@ export const schema = gql`
       productionOrderId: Int!
     ): [ProductionOrderTask!]!
     productionOrderTasksByTenant(tenantId: Int!): [ProductionOrderTask!]!
+    productionOrderTasksByTenantMongoId(
+      tenantMongoId: String!
+    ): [ProductionOrderTask!]!
     productionOrderTasksByWorkspace(workspaceId: Int!): [ProductionOrderTask!]!
+    productionOrderTasksByWorkspaceMongoId(
+      workspaceMongoId: String!
+    ): [ProductionOrderTask!]!
     productionOrderTasksByStatus(status: TaskStatus!): [ProductionOrderTask!]!
     productionOrderTasksByAssignee(userId: Int!): [ProductionOrderTask!]!
+    productionOrderTasksByAssigneesMongoId(
+      assigneeMongoId: String!
+    ): [ProductionOrderTask!]!
     productionOrderTasksBySupervisor(
       supervisorId: Int!
+    ): [ProductionOrderTask!]!
+    productionOrderTasksBySupervisorMongoId(
+      supervisorMongoId: String!
+    ): [ProductionOrderTask!]!
+    productionOrderTasksByCreatedByMongoId(
+      createdByMongoId: String!
     ): [ProductionOrderTask!]!
     productionOrderSubTasks(parentId: Int!): [ProductionOrderTask!]!
     productionOrderTaskStatistics(
@@ -47,21 +62,26 @@ export const schema = gql`
     parent: ProductionOrderTask
     parentId: Int
     tenantId: Int!
+    tenantMongoId: String!
     workspace: TenantWorkspace!
     workspaceId: Int!
+    workspaceMongoId: String!
     productionOrder: ProductionOrder!
     productionOrderId: Int!
     status: TaskStatus!
     startDate: DateTime
     endDate: DateTime
     assignees: [Int!]!
+    assigneesMongoId: [String!]!
     supervisorUser: TenantUser
     supervisor: Int
+    supervisorMongoId: String
     dependencies: [Int!]!
     remarks: String
     createdAt: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
+    createdByMongoId: String!
     subTasks: [ProductionOrderTask!]!
     customFields: ProductionOrderTaskCustomFields!
   }
@@ -86,16 +106,21 @@ export const schema = gql`
   input CreateProductionOrderTaskInput {
     parentId: Int
     tenantId: Int!
+    tenantMongoId: String!
     workspaceId: Int!
+    workspaceMongoId: String!
     productionOrderId: Int!
     status: TaskStatus
     startDate: DateTime
     endDate: DateTime
     assignees: [Int!]
+    assigneesMongoId: [String!]
     supervisor: Int
+    supervisorMongoId: String
     dependencies: [Int!]
     remarks: String
     createdBy: Int!
+    createdByMongoId: String!
     customFields: ProductionOrderTaskCustomFieldsInput
   }
 
