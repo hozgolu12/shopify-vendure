@@ -22,6 +22,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Run migrations
+        run: npx vendure migrate
+
       - name: Build Vendure app
         run: npm run build
 

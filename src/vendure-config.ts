@@ -15,8 +15,6 @@ import "dotenv/config";
 import path from "path";
 import { CustomerRelationPlugin } from "./plugins/customer-relation/customer-relation.plugin";
 import { measurementsSchema } from "./schema/customer/measurements.schema";
-import { productKitsSchema } from "./schema/channel/productKits.schema";
-import { orderKitsSchema } from "./schema/channel/orderKits.schema";
 // import { ProductKit } from "./entities/product-kit.entity";
 import { UserPlugin } from "./plugins/tenant-user/user.plugin";
 import { CompanyPlugin } from "./plugins/tenant-company/company.plugin";

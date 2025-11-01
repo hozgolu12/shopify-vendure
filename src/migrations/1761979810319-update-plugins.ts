@@ -1,6 +1,6 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class UpdatedTypes1761977073731 implements MigrationInterface {
+export class UpdatePlugins1761979810319 implements MigrationInterface {
 
    public async up(queryRunner: QueryRunner): Promise<any> {
         await queryRunner.query(`ALTER TABLE "channel" DROP COLUMN "customFieldsProductkits"`, undefined);
