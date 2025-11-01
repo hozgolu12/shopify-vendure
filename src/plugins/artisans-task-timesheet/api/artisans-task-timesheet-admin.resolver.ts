@@ -272,16 +272,13 @@ export class ArtisanTaskTimesheetResolver {
   async createArtisanTaskTimesheet(
     @Ctx() ctx: RequestContext,
     @Args() args: { input: any }
-  ): Promise<ArtisanTaskTimesheetWithCalculatedFields> {
+  ): Promise<ArtisanTaskTimesheet> {
     const timesheet = await this.artisanTaskTimesheetService.create(
       ctx,
       args.input
     );
-    return {
-      ...timesheet,
-      totalCost: timesheet.calculateTotalCost(),
-      timeSpentInHours: timesheet.getTimeSpentInHours(),
-    };
+    // Return the entity directly - GraphQL will resolve the fields from the schema
+    return timesheet;
   }
 
   @Mutation()
