@@ -15,12 +15,6 @@ import { TaskStatus } from "../types";
 registerEnumType(TaskStatus, {
   name: "TaskStatus",
   description: "Status of a production order task",
-  valuesMap: {
-    TODO: { value: TaskStatus.TODO },
-    IN_PROGRESS: { value: TaskStatus.IN_PROGRESS },
-    ON_HOLD: { value: TaskStatus.ON_HOLD },
-    COMPLETED: { value: TaskStatus.COMPLETED },
-  },
 });
 
 @Resolver()
