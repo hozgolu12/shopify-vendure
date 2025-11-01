@@ -85,7 +85,6 @@ export const schema = gql`
     READY_FOR_QC
     COMPLETED
     CANCELLED
-    ARCHIVED
     ON_HOLD
   }
 

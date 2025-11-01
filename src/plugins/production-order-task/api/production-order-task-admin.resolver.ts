@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
+import { Args, Mutation, Query, Resolver, registerEnumType } from "@nestjs/graphql";
 import {
   Ctx,
   RequestContext,
@@ -10,6 +10,18 @@ import {
 import { ProductionOrderTaskService } from "../services/production-order-task.service";
 import { ProductionOrderTask } from "../entities/production-order-task.entity";
 import { TaskStatus } from "../types";
+
+// Register the TaskStatus enum with GraphQL
+registerEnumType(TaskStatus, {
+  name: "TaskStatus",
+  description: "Status of a production order task",
+  valuesMap: {
+    TODO: { value: TaskStatus.TODO },
+    IN_PROGRESS: { value: TaskStatus.IN_PROGRESS },
+    ON_HOLD: { value: TaskStatus.ON_HOLD },
+    COMPLETED: { value: TaskStatus.COMPLETED },
+  },
+});
 
 @Resolver()
 export class ProductionOrderTaskResolver {

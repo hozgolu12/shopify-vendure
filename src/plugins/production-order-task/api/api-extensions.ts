@@ -92,10 +92,10 @@ export const schema = gql`
   }
 
   enum TaskStatus {
-    TO_DO
+    TODO
     IN_PROGRESS
     ON_HOLD
-    DONE
+    COMPLETED
   }
 
   # Add at least one field to make the type valid
