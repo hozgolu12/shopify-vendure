@@ -59,13 +59,13 @@ export const schema = gql`
   type ArtisanTaskTimesheet {
     id: ID!
     tenantId: Int!
-    tenantMongoId: String!
+    tenantMongoId: String
     workspace: TenantWorkspace!
     workspaceId: Int!
-    workspaceMongoId: String!
+    workspaceMongoId: String
     artisan: TenantUser!
     artisanId: Int!
-    artisanMongoId: String!
+    artisanMongoId: String
     startDate: DateTime!
     endDate: DateTime
     timeSpent: String
@@ -79,7 +79,7 @@ export const schema = gql`
     created: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
-    createdByMongoId: String!
+    createdByMongoId: String
     totalCost: Float!
     timeSpentInHours: Float!
     customFields: ArtisanTaskTimesheetCustomFields!
@@ -114,11 +114,11 @@ export const schema = gql`
 
   input CreateArtisanTaskTimesheetInput {
     tenantId: Int!
-    tenantMongoId: String!
+    tenantMongoId: String
     workspaceId: Int!
-    workspaceMongoId: String!
+    workspaceMongoId: String
     artisanId: Int!
-    artisanMongoId: String!
+    artisanMongoId: String
     startDate: DateTime!
     endDate: DateTime
     rate: Float!
@@ -128,14 +128,16 @@ export const schema = gql`
     productive: Boolean
     reason: String
     createdBy: Int!
-    createdByMongoId: String!
+    createdByMongoId: String
     customFields: ArtisanTaskTimesheetCustomFieldsInput
   }
 
   input UpdateArtisanTaskTimesheetInput {
     id: ID!
     workspaceId: Int
+    workspaceMongoId: String
     artisanId: Int
+    artisanMongoId: String
     startDate: DateTime
     endDate: DateTime
     rate: Float
