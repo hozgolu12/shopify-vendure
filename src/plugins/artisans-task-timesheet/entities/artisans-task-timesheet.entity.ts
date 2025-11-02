@@ -26,7 +26,7 @@ export class ArtisanTaskTimesheet
   @Column()
   tenantId: number;
 
-  @Column({ type: "text", nullable: false })
+  @Column({ type: "text", nullable: true })
   tenantMongoId: string;
 
   // Workspace relationship
@@ -52,7 +52,7 @@ export class ArtisanTaskTimesheet
   artisanMongoId?: string;
 
   // Time tracking
-  @Column({ type: "timestamp with time zone" })
+  @Column({ type: "timestamp with time zone" , nullable: true})
   startDate: Date;
 
   @Column({ type: "timestamp with time zone", nullable: true })

@@ -34,8 +34,8 @@ export class ProductionOrderTask
   @Column()
   tenantId: number;
 
-  @Column()
-  tenantMongoId: string;
+  @Column({ nullable: true })
+  tenantMongodbId: string;
 
   // Workspace relationship
   @ManyToOne(() => Workspace)
@@ -45,7 +45,7 @@ export class ProductionOrderTask
   @Column()
   workspaceId: number;
 
-  @Column()
+  @Column({ nullable: true })
   workspaceMongoId: string;
 
   // Production Order relationship
@@ -108,7 +108,7 @@ export class ProductionOrderTask
   @Column()
   createdBy: number;
 
-  @Column()
+  @Column({ nullable: true })
   createdByMongoId: string;
 
   @Column((type) => ProductionOrderTaskCustomFields)

@@ -11,7 +11,8 @@
     "start:server": "node ./dist/index.js",
     "start:worker": "node ./dist/index-worker.js",
     "start": "concurrently npm:start:*",
-    "codegen": "graphql-codegen --config codegen.ts"
+    "codegen": "graphql-codegen --config codegen.ts",
+    "migrate": "pwd; rimraf src/migrations/*; vendure migrate -g migration; vendure migrate -r"
   },
   "dependencies": {
     "@vendure/admin-ui-plugin": "3.4.2",
@@ -29,6 +30,7 @@
     "@vendure/cli": "3.4.2",
     "@vendure/ui-devkit": "3.4.2",
     "concurrently": "9.2.1",
+    "rimraf": "^6.1.0",
     "typescript": "5.8.2"
   }
 }

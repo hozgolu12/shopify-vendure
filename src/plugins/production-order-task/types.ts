@@ -9,7 +9,7 @@ export interface PluginInitOptions {
 }
 
 export enum TaskStatus {
-  TODO = "to_do",
+  TODO = "to do",
   IN_PROGRESS = "in_progress",
   ON_HOLD = "on_hold",
   COMPLETED = "completed",

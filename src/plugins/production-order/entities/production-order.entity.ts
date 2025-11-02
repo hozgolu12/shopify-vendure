@@ -31,7 +31,7 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column()
   tenantId: number;
 
-  @Column()
+  @Column({nullable:true})
   tenantMongoId: string;
 
   // Workspace relationship
@@ -42,7 +42,7 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column()
   workspaceId: number;
 
-  @Column()
+  @Column({nullable:true})
   workspaceMongoId: string;
 
   // Vendure Order relationship
