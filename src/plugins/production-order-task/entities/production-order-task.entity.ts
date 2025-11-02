@@ -35,7 +35,7 @@ export class ProductionOrderTask
   tenantId: number;
 
   @Column({ nullable: true })
-  tenantMongodbId: string;
+  tenantMongoId: string;
 
   // Workspace relationship
   @ManyToOne(() => Workspace)
