@@ -79,31 +79,7 @@ export class ProductionOrderService {
     options?: ListQueryOptions<ProductionOrder>,
     relations?: RelationPaths<ProductionOrder>
   ): Promise<PaginatedList<ProductionOrder>> {
-    return this.listQueryBuilder
-      .build(ProductionOrder, options, {
-        relations: relations || [
-          "workspace",
-          "customer",
-          "createdByUser",
-          "vendureOrder",
-          "productKit",
-        ],
-        ctx,
-      })
-      .getManyAndCount()
-      .then(([items, totalItems]) => ({
-        items,
-        totalItems,
-      }));
-  }
-
-  async findOneById(
-    ctx: RequestContext,
-    id: ID,
-    relations?: RelationPaths<ProductionOrder>
-  ): Promise<ProductionOrder | null> {
-    return this.connection.getRepository(ctx, ProductionOrder).findOne({
-      where: { id: id as any },
+    const queryBuilder = this.listQueryBuilder.build(ProductionOrder, options, {
       relations: relations || [
         "workspace",
         "customer",
@@ -111,7 +87,38 @@ export class ProductionOrderService {
         "vendureOrder",
         "productKit",
       ],
+      ctx,
     });
+
+    // Explicitly add MongoDB ID fields to ensure they're selected
+    const alias = queryBuilder.alias || "production_order";
+    queryBuilder.addSelect([
+      `${alias}.tenantMongoId`,
+      `${alias}.workspaceMongoId`,
+    ]);
+
+    return queryBuilder.getManyAndCount().then(([items, totalItems]) => ({
+      items,
+      totalItems,
+    }));
+  }
+
+  async findOneById(
+    ctx: RequestContext,
+    id: ID,
+    relations?: RelationPaths<ProductionOrder>
+  ): Promise<ProductionOrder | null> {
+    return this.connection
+      .getRepository(ctx, ProductionOrder)
+      .createQueryBuilder("order")
+      .where("order.id = :id", { id })
+      .leftJoinAndSelect("order.workspace", "workspace")
+      .leftJoinAndSelect("order.customer", "customer")
+      .leftJoinAndSelect("order.createdByUser", "createdByUser")
+      .leftJoinAndSelect("order.vendureOrder", "vendureOrder")
+      .leftJoinAndSelect("order.productKit", "productKit")
+      .addSelect(["order.tenantMongoId", "order.workspaceMongoId"])
+      .getOne();
   }
 
   async findByTenant(
@@ -312,6 +319,12 @@ export class ProductionOrderService {
 
     const savedOrder = await productionOrderRepo.save(productionOrder);
 
+    // Preserve MongoDB IDs from saved entity before reloading
+    const preservedMongoIds = {
+      tenantMongoId: savedOrder.tenantMongoId,
+      workspaceMongoId: savedOrder.workspaceMongoId,
+    };
+
     // Handle custom fields
     if (input.customFields) {
       await this.customFieldRelationService.updateRelations(
@@ -322,7 +335,15 @@ export class ProductionOrderService {
       );
     }
 
-    return this.findOneById(ctx, savedOrder.id) as Promise<ProductionOrder>;
+    const reloadedOrder = await this.findOneById(ctx, savedOrder.id);
+
+    // Restore MongoDB IDs if they were lost during reload
+    if (reloadedOrder) {
+      reloadedOrder.tenantMongoId = preservedMongoIds.tenantMongoId;
+      reloadedOrder.workspaceMongoId = preservedMongoIds.workspaceMongoId;
+    }
+
+    return reloadedOrder as ProductionOrder;
   }
 
   async update(
