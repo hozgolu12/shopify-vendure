@@ -59,6 +59,7 @@ export const schema = gql`
     createdAt: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
+    createdByMongoId: String
     customFields: ProductionOrderCustomFields!
   }
 
@@ -111,6 +112,7 @@ export const schema = gql`
     stage: String
     designId: Int
     createdBy: Int!
+    createdByMongoId: String
     customFields: ProductionOrderCustomFieldsInput
   }
 

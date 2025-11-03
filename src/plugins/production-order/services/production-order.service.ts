@@ -35,6 +35,7 @@ interface CreateProductionOrderInput {
   stage?: string;
   designId?: number;
   createdBy: number;
+  createdByMongoId?: string;
   customFields?: any;
 }
 
@@ -95,6 +96,7 @@ export class ProductionOrderService {
     queryBuilder.addSelect([
       `${alias}.tenantMongoId`,
       `${alias}.workspaceMongoId`,
+      `${alias}.createdByMongoId`,
     ]);
 
     return queryBuilder.getManyAndCount().then(([items, totalItems]) => ({
@@ -117,7 +119,11 @@ export class ProductionOrderService {
       .leftJoinAndSelect("order.createdByUser", "createdByUser")
       .leftJoinAndSelect("order.vendureOrder", "vendureOrder")
       .leftJoinAndSelect("order.productKit", "productKit")
-      .addSelect(["order.tenantMongoId", "order.workspaceMongoId"])
+      .addSelect([
+        "order.tenantMongoId",
+        "order.workspaceMongoId",
+        "order.createdByMongoId",
+      ])
       .getOne();
   }
 
@@ -315,6 +321,7 @@ export class ProductionOrderService {
       stage: input.stage || "not-started",
       designId: input.designId,
       createdBy: input.createdBy,
+      createdByMongoId: input.createdByMongoId,
     });
 
     const savedOrder = await productionOrderRepo.save(productionOrder);
@@ -323,6 +330,7 @@ export class ProductionOrderService {
     const preservedMongoIds = {
       tenantMongoId: savedOrder.tenantMongoId,
       workspaceMongoId: savedOrder.workspaceMongoId,
+      createdByMongoId: savedOrder.createdByMongoId,
     };
 
     // Handle custom fields
@@ -341,6 +349,7 @@ export class ProductionOrderService {
     if (reloadedOrder) {
       reloadedOrder.tenantMongoId = preservedMongoIds.tenantMongoId;
       reloadedOrder.workspaceMongoId = preservedMongoIds.workspaceMongoId;
+      reloadedOrder.createdByMongoId = preservedMongoIds.createdByMongoId;
     }
 
     return reloadedOrder as ProductionOrder;

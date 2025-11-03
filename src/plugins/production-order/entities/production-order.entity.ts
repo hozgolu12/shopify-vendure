@@ -127,6 +127,9 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column()
   createdBy: number;
 
+  @Column({ nullable: true })
+  createdByMongoId: string;
+
   @Column((type) => ProductionOrderCustomFields)
   customFields: ProductionOrderCustomFields;
 
