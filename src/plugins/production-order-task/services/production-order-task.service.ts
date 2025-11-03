@@ -34,8 +34,10 @@ export class ProductionOrderTaskService {
     options?: ListQueryOptions<ProductionOrderTask>,
     relations?: RelationPaths<ProductionOrderTask>
   ): Promise<PaginatedList<ProductionOrderTask>> {
-    return this.listQueryBuilder
-      .build(ProductionOrderTask, options, {
+    const queryBuilder = this.listQueryBuilder.build(
+      ProductionOrderTask,
+      options,
+      {
         relations: relations || [
           "workspace",
           "productionOrder",
@@ -45,7 +47,20 @@ export class ProductionOrderTaskService {
           "subTasks",
         ],
         ctx,
-      })
+      }
+    );
+
+    // Explicitly add MongoDB ID fields to ensure they're selected
+    const alias = queryBuilder.alias || "production_order_task";
+    queryBuilder.addSelect([
+      `${alias}.tenantMongoId`,
+      `${alias}.workspaceMongoId`,
+      `${alias}.supervisorMongoId`,
+      `${alias}.createdByMongoId`,
+      `${alias}.assigneesMongoId`,
+    ]);
+
+    return queryBuilder
       .getManyAndCount()
       .then(([items, totalItems]) => ({
         items,
@@ -58,17 +73,24 @@ export class ProductionOrderTaskService {
     id: ID,
     relations?: RelationPaths<ProductionOrderTask>
   ): Promise<ProductionOrderTask | null> {
-    return this.connection.getRepository(ctx, ProductionOrderTask).findOne({
-      where: { id: id as any },
-      relations: relations || [
-        "workspace",
-        "productionOrder",
-        "createdByUser",
-        "supervisorUser",
-        "parent",
-        "subTasks",
-      ],
-    });
+    return this.connection
+      .getRepository(ctx, ProductionOrderTask)
+      .createQueryBuilder("task")
+      .where("task.id = :id", { id })
+      .leftJoinAndSelect("task.workspace", "workspace")
+      .leftJoinAndSelect("task.productionOrder", "productionOrder")
+      .leftJoinAndSelect("task.createdByUser", "createdByUser")
+      .leftJoinAndSelect("task.supervisorUser", "supervisorUser")
+      .leftJoinAndSelect("task.parent", "parent")
+      .leftJoinAndSelect("task.subTasks", "subTasks")
+      .addSelect([
+        "task.tenantMongoId",
+        "task.workspaceMongoId",
+        "task.supervisorMongoId",
+        "task.createdByMongoId",
+        "task.assigneesMongoId",
+      ])
+      .getOne();
   }
 
   async findByProductionOrder(
@@ -169,6 +191,13 @@ export class ProductionOrderTaskService {
       .leftJoinAndSelect("task.productionOrder", "productionOrder")
       .leftJoinAndSelect("task.createdByUser", "createdByUser")
       .leftJoinAndSelect("task.supervisorUser", "supervisorUser")
+      .addSelect([
+        "task.tenantMongoId",
+        "task.workspaceMongoId",
+        "task.supervisorMongoId",
+        "task.createdByMongoId",
+        "task.assigneesMongoId",
+      ])
       .orderBy("task.createdAt", "DESC")
       .getMany();
   }
@@ -188,6 +217,13 @@ export class ProductionOrderTaskService {
       .leftJoinAndSelect("task.productionOrder", "productionOrder")
       .leftJoinAndSelect("task.createdByUser", "createdByUser")
       .leftJoinAndSelect("task.supervisorUser", "supervisorUser")
+      .addSelect([
+        "task.tenantMongoId",
+        "task.workspaceMongoId",
+        "task.supervisorMongoId",
+        "task.createdByMongoId",
+        "task.assigneesMongoId",
+      ])
       .orderBy("task.createdAt", "DESC")
       .getMany();
   }
@@ -326,6 +362,15 @@ export class ProductionOrderTaskService {
 
     const savedTask = await taskRepo.save(task);
 
+    // Preserve MongoDB IDs from saved entity before reloading
+    const preservedMongoIds = {
+      tenantMongoId: savedTask.tenantMongoId,
+      workspaceMongoId: savedTask.workspaceMongoId,
+      supervisorMongoId: savedTask.supervisorMongoId,
+      createdByMongoId: savedTask.createdByMongoId,
+      assigneesMongoId: savedTask.assigneesMongoId,
+    };
+
     // Handle custom fields
     if (input.customFields) {
       await this.customFieldRelationService.updateRelations(
@@ -336,7 +381,18 @@ export class ProductionOrderTaskService {
       );
     }
 
-    return this.findOneById(ctx, savedTask.id) as Promise<ProductionOrderTask>;
+    const reloadedTask = await this.findOneById(ctx, savedTask.id);
+
+    // Restore MongoDB IDs if they were lost during reload
+    if (reloadedTask) {
+      reloadedTask.tenantMongoId = preservedMongoIds.tenantMongoId;
+      reloadedTask.workspaceMongoId = preservedMongoIds.workspaceMongoId;
+      reloadedTask.supervisorMongoId = preservedMongoIds.supervisorMongoId;
+      reloadedTask.createdByMongoId = preservedMongoIds.createdByMongoId;
+      reloadedTask.assigneesMongoId = preservedMongoIds.assigneesMongoId;
+    }
+
+    return reloadedTask as ProductionOrderTask;
   }
 
   async update(
