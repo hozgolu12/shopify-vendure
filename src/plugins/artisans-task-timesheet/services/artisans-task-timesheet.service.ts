@@ -116,16 +116,23 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      // All columns exist, use normal query
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).findOne({
-        where: { id: id as any },
-        relations: relations || [
-          "workspace",
-          "artisan",
-          "productionOrder",
-          "createdByUser",
-        ],
-      });
+      // All columns exist, but we need to explicitly select MongoDB ID fields
+      // because they have select: false in the entity definition
+      return this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.id = :id", { id })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ])
+        .getOne();
     } else {
       // Use query builder with explicit column selection (excluding mongoId columns)
       const queryBuilder = await this.createSafeQueryBuilder(ctx, "timesheet");
@@ -491,12 +498,29 @@ export class ArtisanTaskTimesheetService {
       );
     }
 
+    // Preserve MongoDB IDs from saved entity before reloading
+    // (They might not be loaded by findOneById due to select: false decorator)
+    const preservedMongoIds = {
+      tenantMongoId: savedTimesheet.tenantMongoId,
+      workspaceMongoId: savedTimesheet.workspaceMongoId,
+      artisanMongoId: savedTimesheet.artisanMongoId,
+      createdByMongoId: savedTimesheet.createdByMongoId,
+    };
+
     // Try to reload with relations, but handle missing columns gracefully
     try {
-      return this.findOneById(
-        ctx,
-        savedTimesheet.id
-      ) as Promise<ArtisanTaskTimesheet>;
+      const reloadedTimesheet = await this.findOneById(ctx, savedTimesheet.id);
+
+      // Restore MongoDB IDs that might have been lost during reload
+      // (due to select: false decorator in entity)
+      if (reloadedTimesheet && hasMongoIdColumns) {
+        reloadedTimesheet.tenantMongoId = preservedMongoIds.tenantMongoId;
+        reloadedTimesheet.workspaceMongoId = preservedMongoIds.workspaceMongoId;
+        reloadedTimesheet.artisanMongoId = preservedMongoIds.artisanMongoId;
+        reloadedTimesheet.createdByMongoId = preservedMongoIds.createdByMongoId;
+      }
+
+      return reloadedTimesheet as ArtisanTaskTimesheet;
     } catch (error: any) {
       // If error is about missing columns, just return the saved timesheet without reloading
       if (
@@ -505,8 +529,7 @@ export class ArtisanTaskTimesheetService {
           error.message.includes("column") ||
           error.code === "42703")
       ) {
-        // Manually load relations if needed, or just return saved timesheet
-        // Note: mongoId fields will be undefined, but other fields will work
+        // Return saved timesheet which already has MongoDB IDs
         return savedTimesheet;
       }
       throw error;

@@ -52,7 +52,7 @@ export class ArtisanTaskTimesheet
   artisanMongoId?: string;
 
   // Time tracking
-  @Column({ type: "timestamp with time zone" , nullable: true})
+  @Column({ type: "timestamp with time zone", nullable: true })
   startDate: Date;
 
   @Column({ type: "timestamp with time zone", nullable: true })
@@ -132,6 +132,8 @@ export class ArtisanTaskTimesheet
   calculateTimeSpent() {
     // Calculate time spent only if both start and end dates are provided
     if (this.startDate && this.endDate) {
+      console.log("startDate", this.startDate);
+      console.log("endDate", this.endDate);
       const start = new Date(this.startDate);
       const end = new Date(this.endDate);
 
