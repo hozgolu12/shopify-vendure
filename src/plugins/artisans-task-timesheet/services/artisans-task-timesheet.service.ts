@@ -74,9 +74,11 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      // All columns exist, use normal query
-      return this.listQueryBuilder
-        .build(ArtisanTaskTimesheet, options, {
+      // All columns exist, use query builder and explicitly select MongoDB IDs
+      const queryBuilder = this.listQueryBuilder.build(
+        ArtisanTaskTimesheet,
+        options,
+        {
           relations: relations || [
             "workspace",
             "artisan",
@@ -84,12 +86,25 @@ export class ArtisanTaskTimesheetService {
             "createdByUser",
           ],
           ctx,
-        })
-        .getManyAndCount()
-        .then(([items, totalItems]) => ({
-          items,
-          totalItems,
-        }));
+        }
+      );
+
+      // Get the alias from the query builder's expression map
+      // listQueryBuilder typically uses the entity class name or table name as alias
+      const alias = queryBuilder.alias || "artisan_task_timesheet";
+
+      // Explicitly add MongoDB ID fields (they have select: false in entity)
+      queryBuilder.addSelect([
+        `${alias}.tenantMongoId`,
+        `${alias}.workspaceMongoId`,
+        `${alias}.artisanMongoId`,
+        `${alias}.createdByMongoId`,
+      ]);
+
+      return queryBuilder.getManyAndCount().then(([items, totalItems]) => ({
+        items,
+        totalItems,
+      }));
     } else {
       // Use query builder with explicit column selection (excluding mongoId columns)
       const queryBuilder = await this.createSafeQueryBuilder(ctx, "timesheet");
@@ -151,11 +166,21 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { tenantId },
-        relations: relations || ["workspace", "artisan", "productionOrder"],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.tenantId = :tenantId", { tenantId })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       const queryBuilder = await this.createSafeQueryBuilder(ctx);
       queryBuilder
@@ -174,11 +199,21 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { tenantMongoId },
-        relations: relations || ["workspace", "artisan", "productionOrder"],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.tenantMongoId = :tenantMongoId", { tenantMongoId })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       // Column doesn't exist, can't query by it
       return [];
@@ -193,11 +228,21 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { workspaceId },
-        relations: relations || ["artisan", "productionOrder", "createdByUser"],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.workspaceId = :workspaceId", { workspaceId })
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       const queryBuilder = await this.createSafeQueryBuilder(ctx);
       queryBuilder
@@ -216,11 +261,23 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { workspaceMongoId },
-        relations: relations || ["artisan", "productionOrder", "createdByUser"],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.workspaceMongoId = :workspaceMongoId", {
+          workspaceMongoId,
+        })
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       // Column doesn't exist, can't query by it
       return [];
@@ -235,15 +292,21 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { artisanId },
-        relations: relations || [
-          "workspace",
-          "productionOrder",
-          "createdByUser",
-        ],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.artisanId = :artisanId", { artisanId })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       const queryBuilder = await this.createSafeQueryBuilder(ctx);
       queryBuilder
@@ -262,15 +325,21 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { artisanMongoId },
-        relations: relations || [
-          "workspace",
-          "productionOrder",
-          "createdByUser",
-        ],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.artisanMongoId = :artisanMongoId", { artisanMongoId })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       // Column doesn't exist, can't query by it
       return [];
@@ -286,11 +355,23 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { createdByMongoId },
-        relations: relations || ["workspace", "artisan", "productionOrder"],
-        order: { startDate: "DESC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.createdByMongoId = :createdByMongoId", {
+          createdByMongoId,
+        })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .orderBy("timesheet.startDate", "DESC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       // Column doesn't exist, can't query by it
       return [];
@@ -305,11 +386,23 @@ export class ArtisanTaskTimesheetService {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
     if (hasMongoIdColumns) {
-      return this.connection.getRepository(ctx, ArtisanTaskTimesheet).find({
-        where: { productionOrderId },
-        relations: relations || ["workspace", "artisan", "createdByUser"],
-        order: { startDate: "ASC" },
-      });
+      const queryBuilder = this.connection
+        .getRepository(ctx, ArtisanTaskTimesheet)
+        .createQueryBuilder("timesheet")
+        .where("timesheet.productionOrderId = :productionOrderId", {
+          productionOrderId,
+        })
+        .leftJoinAndSelect("timesheet.workspace", "workspace")
+        .leftJoinAndSelect("timesheet.artisan", "artisan")
+        .leftJoinAndSelect("timesheet.createdByUser", "createdByUser")
+        .orderBy("timesheet.startDate", "ASC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
+      return queryBuilder.getMany();
     } else {
       const queryBuilder = await this.createSafeQueryBuilder(ctx);
       queryBuilder
@@ -338,6 +431,12 @@ export class ArtisanTaskTimesheetService {
         .leftJoinAndSelect("timesheet.artisan", "artisan")
         .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
         .orderBy("timesheet.startDate", "ASC")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ])
         .getMany();
     } else {
       const queryBuilder = await this.createSafeQueryBuilder(ctx);
@@ -363,7 +462,13 @@ export class ArtisanTaskTimesheetService {
         .createQueryBuilder("timesheet")
         .where("timesheet.endDate IS NULL")
         .leftJoinAndSelect("timesheet.artisan", "artisan")
-        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder");
+        .leftJoinAndSelect("timesheet.productionOrder", "productionOrder")
+        .addSelect([
+          "timesheet.tenantMongoId",
+          "timesheet.workspaceMongoId",
+          "timesheet.artisanMongoId",
+          "timesheet.createdByMongoId",
+        ]);
 
       if (artisanId) {
         queryBuilder.andWhere("timesheet.artisanId = :artisanId", {
