@@ -8,3 +8,4 @@ static/email/test-emails
 vendure.sqlite
 backup
 .env.local
+.env
