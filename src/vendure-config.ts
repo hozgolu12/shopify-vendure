@@ -29,6 +29,7 @@ import { ProductionOrderPlugin } from "./plugins/production-order/production-ord
 import { itemConfigSchema } from "./schema/product/item-config.schema";
 import { ProductionOrderTaskPlugin } from "./plugins/production-order-task/production-order-task.plugin";
 import { ArtisanTaskTimesheetPlugin } from "./plugins/artisans-task-timesheet/artisans-task-timesheet.plugin";
+import { ShopifyIntegrationPlugin } from './plugins/shopify-integration/shopify-integration.plugin';
 
 // import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
@@ -94,6 +95,7 @@ export const config: VendureConfig = {
   // need to be updated. See the "Migrations" section in README.md.
   customFields: {
     Product: [productTypeSchema, itemConfigSchema],
+    
     // Channel: [productKitsSchema, orderKitsSchema],
     Customer: [measurementsSchema],
     // TenantUser: [companySchema, locationSchema, workspaceSchema],
@@ -161,5 +163,6 @@ export const config: VendureConfig = {
     ProductionOrderPlugin.init({}),
     ProductionOrderTaskPlugin.init({}),
     ArtisanTaskTimesheetPlugin.init({}),
-  ],
+    ShopifyIntegrationPlugin.init({}),
+],
 };
