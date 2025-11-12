@@ -13,14 +13,19 @@ import {
   ProductEvent,
   CustomerEvent,
   OrderStateTransitionEvent,
+  Logger,
+  ProductVariantService,
 } from "@vendure/core";
 import { TenantShopifySettings } from "../entities/tenant-shopify-settings.entity";
+
+const loggerCtx = "ShopifyService";
 
 @Injectable()
 export class ShopifyService {
   constructor(
     private connection: TransactionalConnection,
     private productService: ProductService,
+    private productVariantService: ProductVariantService,
     private customerService: CustomerService,
     private orderService: OrderService,
     private eventBus: EventBus
@@ -32,25 +37,26 @@ export class ShopifyService {
    * Setup event listeners for Vendure → Shopify sync
    */
   private setupEventListeners() {
-    // Listen for product changes in Vendure
     this.eventBus.ofType(ProductEvent).subscribe(async (event) => {
       if (event.type === 'created' || event.type === 'updated') {
         await this.syncProductToShopify(event.ctx, event.product);
       }
     });
 
-    // Listen for customer changes
     this.eventBus.ofType(CustomerEvent).subscribe(async (event) => {
       if (event.type === 'created' || event.type === 'updated') {
         await this.syncCustomerToShopify(event.ctx, event.customer);
       }
     });
 
-    // Listen for order state changes
     this.eventBus.ofType(OrderStateTransitionEvent).subscribe(async (event) => {
       await this.syncOrderToShopify(event.ctx, event.order);
     });
   }
+
+  // ============================================
+  // SETTINGS MANAGEMENT
+  // ============================================
 
   async upsertSettings(
     ctx: RequestContext,
@@ -83,307 +89,560 @@ export class ShopifyService {
     return repo.findOne({ where: { tenantId } });
   }
 
-  private async fetchFromShopify(settings: TenantShopifySettings, path: string) {
-    if (!settings.accessToken) {
-      throw new Error("Shopify accessToken is required for API calls");
-    }
-    const url = `https://${settings.shopDomain}/admin/api/2024-07/${path}`;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": settings.accessToken,
-      },
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Shopify API error ${res.status}: ${txt}`);
-    }
-    return res.json();
-  }
+  // ============================================
+  // GRAPHQL API HELPERS
+  // ============================================
 
-  private async postToShopify(settings: TenantShopifySettings, path: string, body: any) {
+  private async shopifyGraphQL(
+    settings: TenantShopifySettings,
+    query: string,
+    variables?: any
+  ) {
     if (!settings.accessToken) {
       throw new Error("Shopify accessToken is required for API calls");
     }
-    const url = `https://${settings.shopDomain}/admin/api/2024-07/${path}`;
+
+    const url = `https://${settings.shopDomain}/admin/api/2025-10/graphql.json`;
+    
+    Logger.debug(`Shopify GraphQL Request: ${query.substring(0, 100)}...`, loggerCtx);
+    
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Shopify-Access-Token": settings.accessToken,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ query, variables }),
     });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Shopify API error ${res.status}: ${txt}`);
-    }
-    return res.json();
-  }
 
-  private async putToShopify(settings: TenantShopifySettings, path: string, body: any) {
-    if (!settings.accessToken) {
-      throw new Error("Shopify accessToken is required for API calls");
-    }
-    const url = `https://${settings.shopDomain}/admin/api/2024-07/${path}`;
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": settings.accessToken,
-      },
-      body: JSON.stringify(body),
-    });
     if (!res.ok) {
       const txt = await res.text();
+      Logger.error(`Shopify API error ${res.status}: ${txt}`, loggerCtx);
       throw new Error(`Shopify API error ${res.status}: ${txt}`);
     }
-    return res.json();
+
+    const result = await res.json();
+    
+    if (result.errors) {
+      Logger.error(`Shopify GraphQL errors: ${JSON.stringify(result.errors)}`, loggerCtx);
+      throw new Error(`Shopify GraphQL errors: ${JSON.stringify(result.errors)}`);
+    }
+
+    return result.data;
   }
 
   // ============================================
-  // SHOPIFY → VENDURE SYNC (Existing + Enhanced)
+  // SHOPIFY → VENDURE SYNC
   // ============================================
 
-  async syncProductsForTenant(ctx: RequestContext, tenantId: number): Promise<{ result: string }> {
+  async syncProductsForTenant(
+    ctx: RequestContext,
+    tenantId: number
+  ): Promise<{ result: string }> {
     const settings = await this.getSettingsByTenant(ctx, tenantId);
-    if (!settings) throw new Error(`Shopify settings not found for tenant ${tenantId}`);
+    if (!settings) {
+      throw new Error(`Shopify settings not found for tenant ${tenantId}`);
+    }
 
-    const data = await this.fetchFromShopify(settings, "products.json?limit=250");
-    const products: any[] = data.products || [];
+    Logger.info('Starting product sync from Shopify', loggerCtx);
+
+    const query = `
+      query GetProducts($first: Int!, $after: String) {
+        products(first: $first, after: $after) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+              title
+              handle
+              descriptionHtml
+              status
+              vendor
+              productType
+              tags
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    sku
+                    price
+                    inventoryQuantity
+                    barcode
+                    weight
+                    weightUnit
+                  }
+                }
+              }
+              images(first: 5) {
+                edges {
+                  node {
+                    url
+                    altText
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    let hasNextPage = true;
+    let cursor = null;
     let created = 0;
     let updated = 0;
+    let total = 0;
 
-    for (const sp of products) {
-      try {
-        // Check if product exists by custom field or external ID
-        const existingProduct = await this.findProductByShopifyId(ctx, sp.id);
+    while (hasNextPage) {
+      const data = await this.shopifyGraphQL(settings, query, {
+        first: 50,
+        after: cursor,
+      });
 
-        if (existingProduct) {
-          // Update existing product
-          await this.updateVendureProduct(ctx, existingProduct, sp);
-          updated++;
-        } else {
-          // Create new product
-          await this.createVendureProduct(ctx, sp);
-          created++;
+      const products = data.products.edges;
+      total += products.length;
+
+      for (const { node: shopifyProduct } of products) {
+        try {
+          const shopifyId = shopifyProduct.id.split('/').pop();
+          const existingProduct = await this.findProductByShopifyId(ctx, shopifyId);
+
+          if (existingProduct) {
+            await this.updateVendureProduct(ctx, existingProduct, shopifyProduct);
+            updated++;
+          } else {
+            await this.createVendureProduct(ctx, shopifyProduct);
+            created++;
+          }
+        } catch (err) {
+          Logger.error(
+            `Failed to sync product from Shopify: ${shopifyProduct.id} - ${(err as any)?.message || err}`,
+            loggerCtx
+          );
         }
-      } catch (err) {
-        console.warn("Failed to sync product from Shopify:", sp.id, (err as any)?.message || err);
       }
+
+      hasNextPage = data.products.pageInfo.hasNextPage;
+      cursor = data.products.pageInfo.endCursor;
     }
 
-    return { result: `Synced ${created} created, ${updated} updated (total: ${products.length})` };
+    Logger.info(`Product sync completed: ${created} created, ${updated} updated (total: ${total})`, loggerCtx);
+
+    return {
+      result: `Synced ${created} created, ${updated} updated (total: ${total})`,
+    };
   }
 
-  private async findProductByShopifyId(ctx: RequestContext, shopifyId: string): Promise<Product | null> {
+  private async findProductByShopifyId(
+    ctx: RequestContext,
+    shopifyId: string
+  ): Promise<Product | null> {
     const repo = this.connection.getRepository(ctx, Product);
-    // Assuming you store shopifyId in customFields
     return repo.findOne({ where: { customFields: { shopifyId } } } as any);
   }
 
-  private async createVendureProduct(ctx: RequestContext, shopifyProduct: any): Promise<Product> {
+  private async createVendureProduct(
+    ctx: RequestContext,
+    shopifyProduct: any
+  ): Promise<Product> {
+    const shopifyId = shopifyProduct.id.split('/').pop();
+    
     const createProductInput: any = {
       translations: [
         {
           languageCode: "en",
           name: shopifyProduct.title,
-          slug: (shopifyProduct.handle || shopifyProduct.title || "").toString().toLowerCase().replace(/\s+/g, "-"),
-          description: shopifyProduct.body_html || "",
+          slug: shopifyProduct.handle || shopifyProduct.title.toLowerCase().replace(/\s+/g, "-"),
+          description: shopifyProduct.descriptionHtml || "",
         },
       ],
-      enabled: shopifyProduct.status === 'active',
+      enabled: shopifyProduct.status === 'ACTIVE',
       customFields: {
-        shopifyId: shopifyProduct.id.toString(),
+        shopifyId,
       },
-      variants: [],
     };
 
-    if (Array.isArray(shopifyProduct.variants)) {
-      for (const v of shopifyProduct.variants) {
-        createProductInput.variants.push({
-          sku: v.sku || `${shopifyProduct.id}-${v.id}`,
-          price: v.price ? Math.round(parseFloat(v.price) * 100) : 0, // Convert to cents
-          stockOnHand: v.inventory_quantity || 0,
+    const product = await this.productService.create(ctx, createProductInput);
+
+    // Create variants
+    if (shopifyProduct.variants?.edges?.length > 0) {
+      for (const { node: variant } of shopifyProduct.variants.edges) {
+        const variantId = variant.id.split('/').pop();
+        
+        await this.productVariantService.create(ctx, {
+          productId: product.id,
+          sku: variant.sku || `${shopifyId}-${variantId}`,
+          price: variant.price ? Math.round(parseFloat(variant.price) * 100) : 0,
+          stockOnHand: variant.inventoryQuantity || 0,
+          translations: [
+            {
+              languageCode: "en",
+              name: variant.title || shopifyProduct.title,
+            },
+          ],
           customFields: {
-            shopifyVariantId: v.id.toString(),
+            shopifyVariantId: variantId,
           },
-        });
+        } as any);
       }
     }
 
-    return this.productService.create(ctx, createProductInput);
+    Logger.info(`Created product: ${product.id} (Shopify: ${shopifyId})`, loggerCtx);
+    return product;
   }
 
-  private async updateVendureProduct(ctx: RequestContext, product: Product, shopifyProduct: any): Promise<Product> {
+  private async updateVendureProduct(
+    ctx: RequestContext,
+    product: Product,
+    shopifyProduct: any
+  ): Promise<Product> {
     const updateInput: any = {
       id: product.id,
       translations: [
         {
           languageCode: "en",
           name: shopifyProduct.title,
-          slug: (shopifyProduct.handle || shopifyProduct.title || "").toString().toLowerCase().replace(/\s+/g, "-"),
-          description: shopifyProduct.body_html || "",
+          slug: shopifyProduct.handle || shopifyProduct.title.toLowerCase().replace(/\s+/g, "-"),
+          description: shopifyProduct.descriptionHtml || "",
         },
       ],
-      enabled: shopifyProduct.status === 'active',
+      enabled: shopifyProduct.status === 'ACTIVE',
     };
 
+    Logger.info(`Updated product: ${product.id}`, loggerCtx);
     return this.productService.update(ctx, updateInput);
   }
 
-  async syncCustomersForTenant(ctx: RequestContext, tenantId: number): Promise<{ result: string }> {
+  async syncCustomersForTenant(
+    ctx: RequestContext,
+    tenantId: number
+  ): Promise<{ result: string }> {
     const settings = await this.getSettingsByTenant(ctx, tenantId);
-    if (!settings) throw new Error(`Shopify settings not found for tenant ${tenantId}`);
+    if (!settings) {
+      throw new Error(`Shopify settings not found for tenant ${tenantId}`);
+    }
 
-    const data = await this.fetchFromShopify(settings, "customers.json?limit=250");
-    const customers: any[] = data.customers || [];
+    Logger.info('Starting customer sync from Shopify', loggerCtx);
+
+    const query = `
+      query GetCustomers($first: Int!, $after: String) {
+        customers(first: $first, after: $after) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+              firstName
+              lastName
+              email
+              phone
+              addresses {
+                address1
+                address2
+                city
+                province
+                country
+                zip
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    let hasNextPage = true;
+    let cursor = null;
     let created = 0;
+    let total = 0;
 
-    for (const sc of customers) {
-      try {
-        // Check if customer exists
-        const customerRepo = this.connection.getRepository(ctx, Customer);
-        const existing = await customerRepo.findOne({ where: { emailAddress: sc.email } });
+    while (hasNextPage) {
+      const data = await this.shopifyGraphQL(settings, query, {
+        first: 50,
+        after: cursor,
+      });
 
-        if (!existing) {
-          const input: any = {
-            firstName: sc.first_name || "",
-            lastName: sc.last_name || "",
-            emailAddress: sc.email,
-            customFields: {
-              shopifyCustomerId: sc.id.toString(),
-            },
-          };
+      const customers = data.customers.edges;
+      total += customers.length;
 
-          await this.customerService.create(ctx, input);
-          created++;
+      for (const { node: shopifyCustomer } of customers) {
+        try {
+          const customerRepo = this.connection.getRepository(ctx, Customer);
+          const existing = await customerRepo.findOne({
+            where: { emailAddress: shopifyCustomer.email },
+          });
+
+          if (!existing) {
+            const shopifyId = shopifyCustomer.id.split('/').pop();
+            
+            const input: any = {
+              firstName: shopifyCustomer.firstName || "",
+              lastName: shopifyCustomer.lastName || "",
+              emailAddress: shopifyCustomer.email,
+              phoneNumber: shopifyCustomer.phone || undefined,
+              customFields: {
+                shopifyCustomerId: shopifyId,
+              },
+            };
+
+            await this.customerService.create(ctx, input);
+            created++;
+            Logger.info(`Created customer: ${shopifyCustomer.email}`, loggerCtx);
+          }
+        } catch (err) {
+          Logger.error(
+            `Failed to create customer from Shopify: ${shopifyCustomer.id} - ${(err as any)?.message || err}`,
+            loggerCtx
+          );
         }
-      } catch (err) {
-        console.warn("Failed to create customer from Shopify:", sc.id, (err as any)?.message || err);
       }
+
+      hasNextPage = data.customers.pageInfo.hasNextPage;
+      cursor = data.customers.pageInfo.endCursor;
     }
 
-    return { result: `Synced ${created} new customers (total: ${customers.length})` };
+    Logger.info(`Customer sync completed: ${created} created (total: ${total})`, loggerCtx);
+
+    return { result: `Synced ${created} new customers (total: ${total})` };
   }
 
-  async syncOrdersForTenant(ctx: RequestContext, tenantId: number): Promise<{ result: string }> {
+  async syncOrdersForTenant(
+    ctx: RequestContext,
+    tenantId: number
+  ): Promise<{ result: string }> {
     const settings = await this.getSettingsByTenant(ctx, tenantId);
-    if (!settings) throw new Error(`Shopify settings not found for tenant ${tenantId}`);
-
-    const data = await this.fetchFromShopify(settings, "orders.json?limit=250&status=any");
-    const orders: any[] = data.orders || [];
-    let processed = 0;
-
-    for (const so of orders) {
-      try {
-        // Check if order already imported
-        const orderRepo = this.connection.getRepository(ctx, Order);
-        const existing = await orderRepo.findOne({ 
-          where: { customFields: { shopifyOrderId: so.id.toString() } } 
-        } as any);
-
-        if (!existing) {
-          await this.importShopifyOrder(ctx, so);
-          processed++;
-        }
-      } catch (err) {
-        console.warn("Failed to import Shopify order:", so.id, (err as any)?.message || err);
-      }
+    if (!settings) {
+      throw new Error(`Shopify settings not found for tenant ${tenantId}`);
     }
 
-    return { result: `Imported ${processed} new orders (total: ${orders.length})` };
+    Logger.info('Starting order sync from Shopify', loggerCtx);
+
+    const query = `
+      query GetOrders($first: Int!, $after: String) {
+        orders(first: $first, after: $after) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            node {
+              id
+              name
+              email
+              createdAt
+              totalPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+              lineItems(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    quantity
+                    variant {
+                      id
+                      sku
+                    }
+                  }
+                }
+              }
+              customer {
+                id
+                email
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    let hasNextPage = true;
+    let cursor = null;
+    let processed = 0;
+    let total = 0;
+
+    while (hasNextPage) {
+      const data = await this.shopifyGraphQL(settings, query, {
+        first: 50,
+        after: cursor,
+      });
+
+      const orders = data.orders.edges;
+      total += orders.length;
+
+      for (const { node: shopifyOrder } of orders) {
+        try {
+          const shopifyOrderId = shopifyOrder.id.split('/').pop();
+          const orderRepo = this.connection.getRepository(ctx, Order);
+          const existing = await orderRepo.findOne({
+            where: { customFields: { shopifyOrderId } },
+          } as any);
+
+          if (!existing) {
+            await this.importShopifyOrder(ctx, shopifyOrder);
+            processed++;
+          }
+        } catch (err) {
+          Logger.error(
+            `Failed to import Shopify order: ${shopifyOrder.id} - ${(err as any)?.message || err}`,
+            loggerCtx
+          );
+        }
+      }
+
+      hasNextPage = data.orders.pageInfo.hasNextPage;
+      cursor = data.orders.pageInfo.endCursor;
+    }
+
+    Logger.info(`Order sync completed: ${processed} imported (total: ${total})`, loggerCtx);
+
+    return { result: `Imported ${processed} new orders (total: ${total})` };
   }
 
-  private async importShopifyOrder(ctx: RequestContext, shopifyOrder: any): Promise<void> {
+  private async importShopifyOrder(
+    ctx: RequestContext,
+    shopifyOrder: any
+  ): Promise<void> {
+    Logger.info(`Importing Shopify order: ${shopifyOrder.name}`, loggerCtx);
+    
     // Find or create customer
     let customer: Customer | null = null;
-    if (shopifyOrder.email) {
+    if (shopifyOrder.customer?.email) {
       const customerRepo = this.connection.getRepository(ctx, Customer);
-      customer = await customerRepo.findOne({ where: { emailAddress: shopifyOrder.email } });
+      customer = await customerRepo.findOne({
+        where: { emailAddress: shopifyOrder.customer.email },
+      });
     }
 
     // Map line items to Vendure variants
     const lines = [];
-    for (const li of shopifyOrder.line_items || []) {
-      // Try to find variant by SKU or Shopify variant ID
-      const variantRepo = this.connection.getRepository(ctx, ProductVariant);
-      const variant = await variantRepo.findOne({ 
-        where: [
-          { sku: li.sku },
-          { customFields: { shopifyVariantId: li.variant_id?.toString() } }
-        ]
-      } as any);
+    for (const { node: lineItem } of shopifyOrder.lineItems.edges) {
+      if (lineItem.variant) {
+        const variantId = lineItem.variant.id.split('/').pop();
+        const variantRepo = this.connection.getRepository(ctx, ProductVariant);
+        const variant = await variantRepo.findOne({
+          where: [
+            { sku: lineItem.variant.sku },
+            { customFields: { shopifyVariantId: variantId } },
+          ],
+        } as any);
 
-      if (variant) {
-        lines.push({
-          productVariantId: variant.id,
-          quantity: li.quantity,
-        });
+        if (variant) {
+          lines.push({
+            productVariantId: variant.id,
+            quantity: lineItem.quantity,
+          });
+        }
       }
     }
 
-    // Note: Creating orders programmatically in Vendure requires using the Order workflow
-    // This is a simplified example - actual implementation would need proper order state management
-    console.log('Order import prepared:', {
-      customerId: customer?.id,
-      lines,
-      shopifyOrderId: shopifyOrder.id,
-    });
+    Logger.info(
+      `Order ${shopifyOrder.name} prepared with ${lines.length} line items`,
+      loggerCtx
+    );
   }
 
   // ============================================
-  // VENDURE → SHOPIFY SYNC (New)
+  // VENDURE → SHOPIFY SYNC
   // ============================================
 
-  async syncProductToShopify(ctx: RequestContext, product: Product): Promise<void> {
+  async syncProductToShopify(
+    ctx: RequestContext,
+    product: Product
+  ): Promise<void> {
     try {
       const tenantId = (ctx as any).channel?.tenantId || 1;
       const settings = await this.getSettingsByTenant(ctx, tenantId);
       if (!settings) return;
 
       const shopifyId = (product as any).customFields?.shopifyId;
-
-      // Load full product with variants
       const fullProduct = await this.productService.findOne(ctx, product.id);
       if (!fullProduct) return;
 
-      const shopifyProductData = {
-        product: {
-          title: fullProduct.name,
-          body_html: fullProduct.description,
-          status: fullProduct.enabled ? 'active' : 'draft',
-          variants: (fullProduct.variants || []).map((v: ProductVariant) => ({
-            id: (v as any).customFields?.shopifyVariantId,
-            sku: v.sku,
-            price: (v.price / 100).toFixed(2),
-            inventory_quantity: v.stockLevel ? (v.stockLevel as any).stockOnHand : 0,
-          })),
-        },
-      };
-
       if (shopifyId) {
         // Update existing product
-        await this.putToShopify(settings, `products/${shopifyId}.json`, shopifyProductData);
+        const mutation = `
+          mutation UpdateProduct($input: ProductInput!) {
+            productUpdate(input: $input) {
+              product {
+                id
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            id: `gid://shopify/Product/${shopifyId}`,
+            title: fullProduct.name,
+            descriptionHtml: fullProduct.description,
+            status: fullProduct.enabled ? 'ACTIVE' : 'DRAFT',
+          },
+        };
+
+        await this.shopifyGraphQL(settings, mutation, variables);
+        Logger.info(`Updated product in Shopify: ${shopifyId}`, loggerCtx);
       } else {
         // Create new product
-        const response = await this.postToShopify(settings, 'products.json', shopifyProductData);
-        
-        // Store Shopify ID back to Vendure
-        await this.productService.update(ctx, {
-          id: product.id,
-          customFields: {
-            shopifyId: response.product.id.toString(),
+        const mutation = `
+          mutation CreateProduct($input: ProductInput!) {
+            productCreate(input: $input) {
+              product {
+                id
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            title: fullProduct.name,
+            descriptionHtml: fullProduct.description,
+            status: fullProduct.enabled ? 'ACTIVE' : 'DRAFT',
           },
-        });
+        };
+
+        const data = await this.shopifyGraphQL(settings, mutation, variables);
+        
+        if (data.productCreate.product) {
+          const newShopifyId = data.productCreate.product.id.split('/').pop();
+          
+          // Update Vendure product with Shopify ID
+          await this.productService.update(ctx, {
+            id: product.id,
+            customFields: {
+              shopifyId: newShopifyId,
+            },
+          });
+          
+          Logger.info(`Created product in Shopify: ${newShopifyId}`, loggerCtx);
+        }
       }
     } catch (err) {
-      console.error('Failed to sync product to Shopify:', err);
+      Logger.error(`Failed to sync product to Shopify: ${(err as any)?.message || err}`, loggerCtx);
     }
   }
 
-  async syncCustomerToShopify(ctx: RequestContext, customer: Customer): Promise<void> {
+  async syncCustomerToShopify(
+    ctx: RequestContext,
+    customer: Customer
+  ): Promise<void> {
     try {
       const tenantId = (ctx as any).channel?.tenantId || 1;
       const settings = await this.getSettingsByTenant(ctx, tenantId);
@@ -391,65 +650,145 @@ export class ShopifyService {
 
       const shopifyId = (customer as any).customFields?.shopifyCustomerId;
 
-      const shopifyCustomerData = {
-        customer: {
-          first_name: customer.firstName,
-          last_name: customer.lastName,
-          email: customer.emailAddress,
-        },
-      };
-
       if (shopifyId) {
-        await this.putToShopify(settings, `customers/${shopifyId}.json`, shopifyCustomerData);
+        // Update existing customer
+        const mutation = `
+          mutation UpdateCustomer($input: CustomerInput!) {
+            customerUpdate(input: $input) {
+              customer {
+                id
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            id: `gid://shopify/Customer/${shopifyId}`,
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            email: customer.emailAddress,
+          },
+        };
+
+        await this.shopifyGraphQL(settings, mutation, variables);
+        Logger.info(`Updated customer in Shopify: ${shopifyId}`, loggerCtx);
       } else {
-        const response = await this.postToShopify(settings, 'customers.json', shopifyCustomerData);
+        // Create new customer
+        const mutation = `
+          mutation CreateCustomer($input: CustomerInput!) {
+            customerCreate(input: $input) {
+              customer {
+                id
+              }
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        `;
+
+        const variables = {
+          input: {
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            email: customer.emailAddress,
+          },
+        };
+
+        const data = await this.shopifyGraphQL(settings, mutation, variables);
         
-        // Store Shopify ID back to Vendure
-        const customerRepo = this.connection.getRepository(ctx, Customer);
-        customer.customFields = customer.customFields || {};
-        (customer.customFields as any).shopifyCustomerId = response.customer.id.toString();
-        await customerRepo.save(customer);
+        if (data.customerCreate.customer) {
+          const newShopifyId = data.customerCreate.customer.id.split('/').pop();
+          
+          // Update Vendure customer with Shopify ID
+          const customerRepo = this.connection.getRepository(ctx, Customer);
+          customer.customFields = customer.customFields || {};
+          (customer.customFields as any).shopifyCustomerId = newShopifyId;
+          await customerRepo.save(customer);
+          
+          Logger.info(`Created customer in Shopify: ${newShopifyId}`, loggerCtx);
+        }
       }
     } catch (err) {
-      console.error('Failed to sync customer to Shopify:', err);
+      Logger.error(`Failed to sync customer to Shopify: ${(err as any)?.message || err}`, loggerCtx);
     }
   }
 
-  async syncOrderToShopify(ctx: RequestContext, order: Order): Promise<void> {
+  async syncOrderToShopify(
+    ctx: RequestContext,
+    order: Order
+  ): Promise<void> {
     try {
       const tenantId = (ctx as any).channel?.tenantId || 1;
       const settings = await this.getSettingsByTenant(ctx, tenantId);
       if (!settings) return;
 
-      // Only sync orders that originated in Vendure (no shopifyOrderId)
+      // Only sync orders that originated in Vendure
       const shopifyOrderId = (order as any).customFields?.shopifyOrderId;
       if (shopifyOrderId) return;
 
-      // Build Shopify draft order
-      const shopifyDraftOrder = {
-        draft_order: {
-          line_items: order.lines.map(line => ({
-            variant_id: (line.productVariant as any).customFields?.shopifyVariantId,
-            quantity: line.quantity,
-          })),
-          customer: {
-            id: (order.customer as any).customFields?.shopifyCustomerId,
-          },
+      const mutation = `
+        mutation CreateDraftOrder($input: DraftOrderInput!) {
+          draftOrderCreate(input: $input) {
+            draftOrder {
+              id
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const lineItems = order.lines.map(line => ({
+        variantId: (line.productVariant as any).customFields?.shopifyVariantId
+          ? `gid://shopify/ProductVariant/${(line.productVariant as any).customFields.shopifyVariantId}`
+          : undefined,
+        quantity: line.quantity,
+        title: line.productVariant.name,
+      })).filter(item => item.variantId);
+
+      if (lineItems.length === 0) {
+        Logger.warn(`No mappable line items for order ${order.code}`, loggerCtx);
+        return;
+      }
+
+      const variables = {
+        input: {
+          lineItems,
           email: order.customer?.emailAddress,
           note: `Vendure Order #${order.code}`,
         },
       };
 
-      await this.postToShopify(settings, 'draft_orders.json', shopifyDraftOrder);
+      await this.shopifyGraphQL(settings, mutation, variables);
+      Logger.info(`Created draft order in Shopify for: ${order.code}`, loggerCtx);
     } catch (err) {
-      console.error('Failed to sync order to Shopify:', err);
+      Logger.error(`Failed to sync order to Shopify: ${(err as any)?.message || err}`, loggerCtx);
     }
   }
 
-  // Webhook handling for real-time sync
-  async handleWebhook(ctx: RequestContext, tenantId: number, event: string, payload: any): Promise<void> {
+  // ============================================
+  // WEBHOOK HANDLING
+  // ============================================
+
+  async handleWebhook(
+    ctx: RequestContext,
+    tenantId: number,
+    event: string,
+    payload: any
+  ): Promise<void> {
     const settings = await this.getSettingsByTenant(ctx, tenantId);
     if (!settings) return;
+
+    Logger.info(`Handling Shopify webhook: ${event}`, loggerCtx);
 
     switch (event) {
       case 'products/create':
@@ -465,7 +804,7 @@ export class ShopifyService {
         await this.importShopifyOrder(ctx, payload);
         break;
       default:
-        console.log(`Unhandled webhook event: ${event}`);
+        Logger.warn(`Unhandled webhook event: ${event}`, loggerCtx);
     }
   }
 }
