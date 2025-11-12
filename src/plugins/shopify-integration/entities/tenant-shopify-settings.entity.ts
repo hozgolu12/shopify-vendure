@@ -6,7 +6,6 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { DeepPartial, VendureEntity, HasCustomFields } from "@vendure/core";
-import { ShopifyIntegrationPluginOptions } from "../types";
 
 @Entity()
 export class TenantShopifySettings extends VendureEntity implements HasCustomFields {
