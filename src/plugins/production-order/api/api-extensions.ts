@@ -20,6 +20,7 @@ export const schema = gql`
     productionOrderStatisticsByStage(
       tenantId: Int!
     ): [ProductionOrderStageStatistic!]!
+    lastKitId: Int
   }
 
   extend type Mutation {
@@ -44,7 +45,7 @@ export const schema = gql`
     vendureOrder: Order
     vendureOrderId: Int
     vendureItemId: Int
-    productKit: ProductKit
+    # productKit: ProductKit
     productKitId: Int
     customer: Customer!
     customerId: ID!

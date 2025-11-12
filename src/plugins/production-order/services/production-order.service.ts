@@ -10,12 +10,14 @@ import {
   PaginatedList,
   Customer,
   Order,
+  UserInputError,
 } from "@vendure/core";
+import { QueryFailedError } from "typeorm";
 import { ProductionOrder } from "../entities/production-order.entity";
 import { ProductionOrderType, ProductionStatus } from "../types";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
-import { ProductKit } from "../../product-kit/entities/product-kit.entity";
+// import { ProductKit } from "../../product-kit/entities/product-kit.entity";
 
 interface CreateProductionOrderInput {
   tenantId: number;
@@ -86,7 +88,7 @@ export class ProductionOrderService {
         "customer",
         "createdByUser",
         "vendureOrder",
-        "productKit",
+        // "productKit",
       ],
       ctx,
     });
@@ -110,21 +112,23 @@ export class ProductionOrderService {
     id: ID,
     relations?: RelationPaths<ProductionOrder>
   ): Promise<ProductionOrder | null> {
-    return this.connection
-      .getRepository(ctx, ProductionOrder)
-      .createQueryBuilder("order")
-      .where("order.id = :id", { id })
-      .leftJoinAndSelect("order.workspace", "workspace")
-      .leftJoinAndSelect("order.customer", "customer")
-      .leftJoinAndSelect("order.createdByUser", "createdByUser")
-      .leftJoinAndSelect("order.vendureOrder", "vendureOrder")
-      .leftJoinAndSelect("order.productKit", "productKit")
-      .addSelect([
-        "order.tenantMongoId",
-        "order.workspaceMongoId",
-        "order.createdByMongoId",
-      ])
-      .getOne();
+    return (
+      this.connection
+        .getRepository(ctx, ProductionOrder)
+        .createQueryBuilder("order")
+        .where("order.id = :id", { id })
+        .leftJoinAndSelect("order.workspace", "workspace")
+        .leftJoinAndSelect("order.customer", "customer")
+        .leftJoinAndSelect("order.createdByUser", "createdByUser")
+        .leftJoinAndSelect("order.vendureOrder", "vendureOrder")
+        // .leftJoinAndSelect("order.productKit", "productKit")
+        .addSelect([
+          "order.tenantMongoId",
+          "order.workspaceMongoId",
+          "order.createdByMongoId",
+        ])
+        .getOne()
+    );
   }
 
   async findByTenant(
@@ -251,57 +255,12 @@ export class ProductionOrderService {
       ctx,
       ProductionOrder
     );
-    const workspaceRepo = this.connection.getRepository(ctx, Workspace);
-    const customerRepo = this.connection.getRepository(ctx, Customer);
-    const userRepo = this.connection.getRepository(ctx, TenantUser);
-    const orderRepo = this.connection.getRepository(ctx, Order);
-    const productKitRepo = this.connection.getRepository(ctx, ProductKit);
-
-    // Verify workspace exists
-    const workspace = await workspaceRepo.findOne({
-      where: { id: input.workspaceId },
+    await this.ensureRelatedEntitiesExist(ctx, {
+      workspaceId: input.workspaceId,
+      customerId: input.customerId,
+      createdBy: input.createdBy,
+      vendureOrderId: input.vendureOrderId,
     });
-    if (!workspace) {
-      throw new Error(`Workspace with id ${input.workspaceId} not found`);
-    }
-
-    // Verify customer exists
-    const customer = await customerRepo.findOne({
-      where: { id: input.customerId as any },
-    });
-    if (!customer) {
-      throw new Error(`Customer with id ${input.customerId} not found`);
-    }
-
-    // Verify createdBy user exists
-    const createdByUser = await userRepo.findOne({
-      where: { id: input.createdBy },
-    });
-    if (!createdByUser) {
-      throw new Error(`User with id ${input.createdBy} not found`);
-    }
-
-    // Verify vendure order exists if provided
-    if (input.vendureOrderId) {
-      const vendureOrder = await orderRepo.findOne({
-        where: { id: input.vendureOrderId as any },
-      });
-      if (!vendureOrder) {
-        throw new Error(
-          `Vendure order with id ${input.vendureOrderId} not found`
-        );
-      }
-    }
-
-    // Verify product kit exists if provided
-    if (input.productKitId) {
-      const productKit = await productKitRepo.findOne({
-        where: { id: input.productKitId },
-      });
-      if (!productKit) {
-        throw new Error(`Product kit with id ${input.productKitId} not found`);
-      }
-    }
 
     const productionOrder = productionOrderRepo.create({
       tenantId: input.tenantId,
@@ -355,6 +314,70 @@ export class ProductionOrderService {
     return reloadedOrder as ProductionOrder;
   }
 
+  private async ensureRelatedEntitiesExist(
+    ctx: RequestContext,
+    relations: {
+      workspaceId?: number;
+      customerId?: number;
+      createdBy?: number;
+      vendureOrderId?: number;
+    }
+  ): Promise<void> {
+    const workspaceId =
+      typeof relations.workspaceId === "number"
+        ? relations.workspaceId
+        : undefined;
+    const customerId =
+      typeof relations.customerId === "number"
+        ? relations.customerId
+        : undefined;
+    const createdById =
+      typeof relations.createdBy === "number" ? relations.createdBy : undefined;
+    const vendureOrderId =
+      typeof relations.vendureOrderId === "number"
+        ? relations.vendureOrderId
+        : undefined;
+
+    const [workspace, customer, createdByUser, vendureOrder] =
+      await Promise.all([
+        workspaceId !== undefined
+          ? this.connection
+              .getRepository(ctx, Workspace)
+              .findOne({ where: { id: workspaceId } })
+          : Promise.resolve(null),
+        customerId !== undefined
+          ? this.connection
+              .getRepository(ctx, Customer)
+              .findOne({ where: { id: customerId } })
+          : Promise.resolve(null),
+        createdById !== undefined
+          ? this.connection
+              .getRepository(ctx, TenantUser)
+              .findOne({ where: { id: createdById } })
+          : Promise.resolve(null),
+        vendureOrderId !== undefined
+          ? this.connection
+              .getRepository(ctx, Order)
+              .findOne({ where: { id: vendureOrderId } })
+          : Promise.resolve(null),
+      ]);
+
+    if (workspaceId !== undefined && !workspace) {
+      throw new UserInputError(`Workspace with id ${workspaceId} not found`);
+    }
+    if (customerId !== undefined && !customer) {
+      throw new UserInputError(`Customer with id ${customerId} not found`);
+    }
+    if (createdById !== undefined && !createdByUser) {
+      throw new UserInputError(`User with id ${createdById} not found`);
+    }
+    if (vendureOrderId !== undefined && !vendureOrder) {
+      throw new UserInputError(
+        `Vendure order with id ${vendureOrderId} not found`
+      );
+    }
+  }
+
   async update(
     ctx: RequestContext,
     input: UpdateProductionOrderInput
@@ -367,8 +390,14 @@ export class ProductionOrderService {
 
     const productionOrder = await this.findOneById(ctx, id);
     if (!productionOrder) {
-      throw new Error(`Production order with id ${id} not found`);
+      throw new UserInputError(`Production order with id ${id} not found`);
     }
+
+    await this.ensureRelatedEntitiesExist(ctx, {
+      workspaceId: updateData.workspaceId,
+      customerId: updateData.customerId,
+      vendureOrderId: updateData.vendureOrderId,
+    });
 
     Object.assign(productionOrder, updateData);
     await productionOrderRepo.save(productionOrder);
@@ -398,7 +427,7 @@ export class ProductionOrderService {
 
     const productionOrder = await this.findOneById(ctx, id);
     if (!productionOrder) {
-      throw new Error(`Production order with id ${id} not found`);
+      throw new UserInputError(`Production order with id ${id} not found`);
     }
 
     productionOrder.status = status;
@@ -418,7 +447,7 @@ export class ProductionOrderService {
 
     const productionOrder = await this.findOneById(ctx, id);
     if (!productionOrder) {
-      throw new Error(`Production order with id ${id} not found`);
+      throw new UserInputError(`Production order with id ${id} not found`);
     }
 
     productionOrder.stage = stage;
@@ -427,10 +456,54 @@ export class ProductionOrderService {
   }
 
   async delete(ctx: RequestContext, id: ID): Promise<boolean> {
+    const existing = await this.findOneById(ctx, id);
+    if (!existing) {
+      throw new UserInputError(`Production order with id ${id} not found`);
+    }
+
+    const productionOrderRepo = this.connection.getRepository(
+      ctx,
+      ProductionOrder
+    );
+
+    try {
+      const result = await productionOrderRepo.delete(id);
+      return result.affected ? result.affected > 0 : false;
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (
+          error as QueryFailedError & {
+            driverError?: { code?: string };
+          }
+        ).driverError?.code === "23503"
+      ) {
+        throw new UserInputError(
+          `Cannot delete production order with id ${id} because it is referenced by other records`
+        );
+      }
+      throw error;
+    }
+  }
+
+  async getLastKitId(ctx: RequestContext): Promise<number | null> {
     const result = await this.connection
       .getRepository(ctx, ProductionOrder)
-      .delete(id);
-    return result.affected ? result.affected > 0 : false;
+      .createQueryBuilder("order")
+      .select("MAX(order.productKitId)", "max")
+      .where("order.productKitId IS NOT NULL")
+      .getRawOne<{ max: string | null }>();
+
+    if (!result || result.max === null) {
+      return 0;
+    }
+
+    const parsedMax = Number(result.max);
+    if (!Number.isFinite(parsedMax)) {
+      return null;
+    }
+
+    return parsedMax;
   }
 
   // Get orders statistics by status

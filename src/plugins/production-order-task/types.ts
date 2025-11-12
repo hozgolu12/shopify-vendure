@@ -31,6 +31,7 @@ export interface CreateProductionOrderTaskInput {
   supervisorMongoId?: string;
   dependencies?: number[];
   remarks?: string;
+  workstation?: string;
   createdBy: number;
   createdByMongoId: string;
   customFields?: any;
@@ -48,6 +49,7 @@ export interface UpdateProductionOrderTaskInput {
   supervisor?: number;
   dependencies?: number[];
   remarks?: string;
+  workstation?: string;
   customFields?: any;
 }
 

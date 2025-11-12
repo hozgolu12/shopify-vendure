@@ -92,6 +92,10 @@ export class ArtisanTaskTimesheet
   @Column("text", { nullable: true })
   reason: string;
 
+  // Workstation
+  @Column({ nullable: true })
+  workstation: string;
+
   // Audit fields
   @CreateDateColumn()
   created: Date;

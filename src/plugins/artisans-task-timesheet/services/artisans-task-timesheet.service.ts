@@ -29,6 +29,7 @@ interface CreateArtisanTaskTimesheetInput {
   rework?: boolean;
   productive?: boolean;
   reason?: string;
+  workstation?: string;
   createdBy: number;
   createdByMongoId?: string;
   customFields?: any;
@@ -48,6 +49,7 @@ interface UpdateArtisanTaskTimesheetInput {
   rework?: boolean;
   productive?: boolean;
   reason?: string;
+  workstation?: string;
   customFields?: any;
 }
 
@@ -59,6 +61,7 @@ interface StopTimesheetInput {
 @Injectable()
 export class ArtisanTaskTimesheetService {
   private hasMongoIdColumnsCache: boolean | null = null;
+  private hasWorkstationColumnCache: boolean | null = null;
 
   constructor(
     private connection: TransactionalConnection,
@@ -550,10 +553,13 @@ export class ArtisanTaskTimesheetService {
       "tenantMongoId"
     );
 
+    // Check if workstation column exists
+    const hasWorkstationColumn = await this.getHasWorkstationColumn(ctx);
+
     let savedTimesheet: ArtisanTaskTimesheet;
     if (hasMongoIdColumns) {
       // All columns exist, insert with all fields
-      const timesheet = timesheetRepo.create({
+      const timesheetData: any = {
         tenantId: input.tenantId,
         tenantMongoId: input.tenantMongoId,
         workspaceId: input.workspaceId,
@@ -570,12 +576,19 @@ export class ArtisanTaskTimesheetService {
         reason: input.reason,
         createdBy: input.createdBy,
         createdByMongoId: input.createdByMongoId,
-      });
+      };
 
-      savedTimesheet = await timesheetRepo.save(timesheet);
+      // Only include workstation if column exists
+      if (hasWorkstationColumn && input.workstation !== undefined) {
+        timesheetData.workstation = input.workstation;
+      }
+
+      const timesheet = timesheetRepo.create(timesheetData);
+      const saved = await timesheetRepo.save(timesheet);
+      savedTimesheet = Array.isArray(saved) ? saved[0] : saved;
     } else {
       // Migration hasn't run yet, insert without mongoId columns
-      const timesheetWithoutMongoIds = timesheetRepo.create({
+      const timesheetData: any = {
         tenantId: input.tenantId,
         workspaceId: input.workspaceId,
         artisanId: input.artisanId,
@@ -588,9 +601,16 @@ export class ArtisanTaskTimesheetService {
         productive: input.productive !== undefined ? input.productive : true,
         reason: input.reason,
         createdBy: input.createdBy,
-      });
+      };
 
-      savedTimesheet = await timesheetRepo.save(timesheetWithoutMongoIds);
+      // Only include workstation if column exists
+      if (hasWorkstationColumn && input.workstation !== undefined) {
+        timesheetData.workstation = input.workstation;
+      }
+
+      const timesheetWithoutMongoIds = timesheetRepo.create(timesheetData);
+      const saved = await timesheetRepo.save(timesheetWithoutMongoIds);
+      savedTimesheet = Array.isArray(saved) ? saved[0] : saved;
     }
 
     // Handle custom fields
@@ -659,10 +679,18 @@ export class ArtisanTaskTimesheetService {
     // Check if mongoId columns exist before trying to update them
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
 
+    // Check if workstation column exists
+    const hasWorkstationColumn = await this.getHasWorkstationColumn(ctx);
+
     // If mongoId columns don't exist, remove them from updateData
     if (!hasMongoIdColumns) {
       delete (updateData as any).workspaceMongoId;
       delete (updateData as any).artisanMongoId;
+    }
+
+    // If workstation column doesn't exist, remove it from updateData
+    if (!hasWorkstationColumn) {
+      delete (updateData as any).workstation;
     }
 
     Object.assign(timesheet, updateData);
@@ -670,7 +698,7 @@ export class ArtisanTaskTimesheetService {
     try {
       await timesheetRepo.save(timesheet);
     } catch (error: any) {
-      // If error is about missing columns, try again without mongoId fields
+      // If error is about missing columns, try again without mongoId fields and workstation
       if (
         error.message &&
         (error.message.includes("does not exist") ||
@@ -679,6 +707,7 @@ export class ArtisanTaskTimesheetService {
       ) {
         delete (updateData as any).workspaceMongoId;
         delete (updateData as any).artisanMongoId;
+        delete (updateData as any).workstation;
         Object.assign(timesheet, updateData);
         await timesheetRepo.save(timesheet);
       } else {
@@ -856,12 +885,25 @@ export class ArtisanTaskTimesheetService {
     return this.hasMongoIdColumnsCache;
   }
 
+  // Cached helper to check if workstation column exists
+  private async getHasWorkstationColumn(ctx: RequestContext): Promise<boolean> {
+    if (this.hasWorkstationColumnCache === null) {
+      this.hasWorkstationColumnCache = await this.checkColumnExists(
+        ctx,
+        "artisan_task_timesheet",
+        "workstation"
+      );
+    }
+    return this.hasWorkstationColumnCache;
+  }
+
   // Helper to create a query builder with only existing columns
   private async createSafeQueryBuilder(
     ctx: RequestContext,
     alias: string = "timesheet"
   ) {
     const hasMongoIdColumns = await this.getHasMongoIdColumns(ctx);
+    const hasWorkstationColumn = await this.getHasWorkstationColumn(ctx);
     const queryBuilder = this.connection
       .getRepository(ctx, ArtisanTaskTimesheet)
       .createQueryBuilder(alias)
@@ -894,6 +936,11 @@ export class ArtisanTaskTimesheetService {
         `${alias}.artisanMongoId`,
         `${alias}.createdByMongoId`,
       ]);
+    }
+
+    // Add workstation column if it exists
+    if (hasWorkstationColumn) {
+      queryBuilder.addSelect(`${alias}.workstation`);
     }
 
     return queryBuilder;

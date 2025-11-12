@@ -138,6 +138,12 @@ export class ProductionOrderResolver {
     return this.productionOrderService.getStatisticsByStage(ctx, args.tenantId);
   }
 
+  @Query()
+  @Allow(Permission.SuperAdmin, Permission.UpdateOrder, Permission.ReadOrder)
+  async lastKitId(@Ctx() ctx: RequestContext): Promise<number | null> {
+    return this.productionOrderService.getLastKitId(ctx);
+  }
+
   @Mutation()
   @Allow(Permission.SuperAdmin, Permission.UpdateOrder)
   @Transaction()

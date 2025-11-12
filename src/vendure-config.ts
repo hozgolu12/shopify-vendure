@@ -4,7 +4,6 @@ import {
   DefaultJobQueuePlugin,
   DefaultSearchPlugin,
   VendureConfig,
-  LanguageCode,
 } from "@vendure/core";
 import { defaultEmailHandlers, EmailPlugin } from "@vendure/email-plugin";
 import {
@@ -16,8 +15,12 @@ import "dotenv/config";
 import path from "path";
 import { CustomerRelationPlugin } from "./plugins/customer-relation/customer-relation.plugin";
 import { measurementsSchema } from "./schema/customer/measurements.schema";
+// import { ProductKit } from "./entities/product-kit.entity";
 import { UserPlugin } from "./plugins/tenant-user/user.plugin";
 import { CompanyPlugin } from "./plugins/tenant-company/company.plugin";
+// import { workspaceSchema } from "./schema/tenant-user/workspace.schema";
+// import { locationSchema } from "./schema/tenant-user/location.schema";
+// import { companySchema } from "./schema/tenant-user/company.schema";
 import { TenantInventoryPlugin } from "./plugins/tenant-inventory/tenant-inventory.plugin";
 import { WorkspacePlugin } from "./plugins/tenant-workspace/tenant-workspace.plugin";
 import { ProductKitPlugin } from "./plugins/product-kit/product-kit.plugin";
@@ -26,7 +29,9 @@ import { ProductionOrderPlugin } from "./plugins/production-order/production-ord
 import { itemConfigSchema } from "./schema/product/item-config.schema";
 import { ProductionOrderTaskPlugin } from "./plugins/production-order-task/production-order-task.plugin";
 import { ArtisanTaskTimesheetPlugin } from "./plugins/artisans-task-timesheet/artisans-task-timesheet.plugin";
-import { ShopifyIntegrationPlugin } from './plugins/shopify-integration/shopify-integration.plugin';
+import { subFacetSchema } from "./schema/facetValues/subFacet.schema";
+
+// import { CustomerRelationPlugin } from "./customer-relation/customer-relation.plugin";
 
 const IS_DEV = process.env.APP_ENV === "dev";
 
@@ -35,6 +40,9 @@ export const config: VendureConfig = {
     port: +(process.env.PORT || 3000),
     adminApiPath: "admin-api",
     shopApiPath: "shop-api",
+    // The following options are useful in development mode,
+    // but are best turned off for production for security
+    // reasons.
     ...(IS_DEV
       ? {
           adminApiPlayground: {
@@ -59,6 +67,7 @@ export const config: VendureConfig = {
     },
   },
   dbConnectionOptions: {
+    // Production: Use PostgreSQL
     type: "postgres",
     synchronize: false,
     migrations: [path.join(__dirname, "./migrations/*.+(ts|js)")],
@@ -66,6 +75,7 @@ export const config: VendureConfig = {
     database: process.env.DB_NAME,
     schema: process.env.DB_SCHEMA,
     host: process.env.DB_HOST,
+    // url: process.env.DB_URL,
     port: +process.env.DB_PORT,
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
@@ -78,51 +88,17 @@ export const config: VendureConfig = {
   paymentOptions: {
     paymentMethodHandlers: [dummyPaymentHandler],
   },
+
   entityOptions: {},
+
+  // When adding or altering custom field definitions, the database will
+  // need to be updated. See the "Migrations" section in README.md.
   customFields: {
-    Product: [
-      productTypeSchema, 
-      itemConfigSchema,
-      // Shopify integration field
-      {
-        name: "shopifyId",
-        type: "string",
-        nullable: true,
-        public: false,
-        label: [{ languageCode: LanguageCode.en, value: "Shopify Product ID" }],
-      }
-    ],
-    ProductVariant: [
-      // Shopify integration field
-      {
-        name: "shopifyVariantId",
-        type: "string",
-        nullable: true,
-        public: false,
-        label: [{ languageCode: LanguageCode.en, value: "Shopify Variant ID" }],
-      }
-    ],
-    Customer: [
-      measurementsSchema,
-      // Shopify integration field
-      {
-        name: "shopifyCustomerId",
-        type: "string",
-        nullable: true,
-        public: false,
-        label: [{ languageCode: LanguageCode.en, value: "Shopify Customer ID" }],
-      }
-    ],
-    Order: [
-      // Shopify integration field
-      {
-        name: "shopifyOrderId",
-        type: "string",
-        nullable: true,
-        public: false,
-        label: [{ languageCode: LanguageCode.en, value: "Shopify Order ID" }],
-      }
-    ],
+    Product: [productTypeSchema, itemConfigSchema],
+    // Channel: [productKitsSchema, orderKitsSchema],
+    Customer: [measurementsSchema],
+    FacetValue: [subFacetSchema]
+    // TenantUser: [companySchema, locationSchema, workspaceSchema],
   },
   plugins: [
     AssetServerPlugin.init({
@@ -130,6 +106,9 @@ export const config: VendureConfig = {
       assetUploadDir:
         process.env.ASSET_UPLOAD_DIR ||
         path.join(__dirname, "../static/assets"),
+      // If the MINIO_ENDPOINT environment variable is set, we'll use
+      // Minio as the asset storage provider. Otherwise, we'll use the
+      // default local provider.
       storageStrategyFactory: process.env.MINIO_ENDPOINT
         ? configureS3AssetStorage({
             bucket: "vendure-assets",
@@ -141,6 +120,8 @@ export const config: VendureConfig = {
               endpoint: process.env.MINIO_ENDPOINT,
               forcePathStyle: true,
               signatureVersion: "v4",
+              // The `region` is required by the AWS SDK even when using MinIO,
+              // so we just use a dummy value here.
               region: "eu-west-1",
             },
           })
@@ -155,6 +136,8 @@ export const config: VendureConfig = {
       handlers: defaultEmailHandlers,
       templatePath: path.join(__dirname, "../static/email/templates"),
       globalTemplateVars: {
+        // The following variables will change depending on your storefront implementation.
+        // Here we are assuming a storefront running at http://localhost:8080.
         fromAddress: '"example" <noreply@example.com>',
         verifyEmailAddressUrl: "http://localhost:8080/verify",
         passwordResetUrl: "http://localhost:8080/password-reset",
@@ -162,19 +145,15 @@ export const config: VendureConfig = {
           "http://localhost:8080/verify-email-address-change",
       },
     }),
-    AdminUiPlugin.init({
-      route: "admin",
-      port: 3002,
-      app: compileUiExtensions({
-        outputPath: path.join(__dirname, "../admin-ui"),
-        extensions: [
-          CustomerRelationPlugin.ui, 
-          ProductKitPlugin.ui,
-          ShopifyIntegrationPlugin.ui
-        ],
-        devMode: true,
-      }),
-    }),
+    // AdminUiPlugin.init({
+    //   route: "admin",
+    //   port: 3002,
+    //   app: compileUiExtensions({
+    //     outputPath: path.join(__dirname, "../admin-ui"),
+    //     extensions: [CustomerRelationPlugin.ui, ProductKitPlugin.ui],
+    //     devMode: true,
+    //   }),
+    // }),
     CustomerRelationPlugin,
     UserPlugin,
     CompanyPlugin,
@@ -184,6 +163,5 @@ export const config: VendureConfig = {
     ProductionOrderPlugin.init({}),
     ProductionOrderTaskPlugin.init({}),
     ArtisanTaskTimesheetPlugin.init({}),
-    ShopifyIntegrationPlugin.init({}),
   ],
 };

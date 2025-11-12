@@ -62,10 +62,10 @@ export const schema = gql`
     parent: ProductionOrderTask
     parentId: Int
     tenantId: Int!
-    tenantMongoId: String!
+    tenantMongoId: String
     workspace: TenantWorkspace!
     workspaceId: Int!
-    workspaceMongoId: String!
+    workspaceMongoId: String
     productionOrder: ProductionOrder!
     productionOrderId: Int!
     status: TaskStatus!
@@ -78,10 +78,11 @@ export const schema = gql`
     supervisorMongoId: String
     dependencies: [Int!]!
     remarks: String
+    workstation: String
     createdAt: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
-    createdByMongoId: String!
+    createdByMongoId: String
     subTasks: [ProductionOrderTask!]!
     customFields: ProductionOrderTaskCustomFields!
   }
@@ -119,6 +120,7 @@ export const schema = gql`
     supervisorMongoId: String
     dependencies: [Int!]
     remarks: String
+    workstation: String
     createdBy: Int!
     createdByMongoId: String!
     customFields: ProductionOrderTaskCustomFieldsInput
@@ -136,6 +138,7 @@ export const schema = gql`
     supervisor: Int
     dependencies: [Int!]
     remarks: String
+    workstation: String
     customFields: ProductionOrderTaskCustomFieldsInput
   }
 

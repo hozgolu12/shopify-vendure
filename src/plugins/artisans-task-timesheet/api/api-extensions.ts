@@ -76,6 +76,7 @@ export const schema = gql`
     rework: Boolean!
     productive: Boolean!
     reason: String
+    workstation: String
     created: DateTime!
     createdByUser: TenantUser!
     createdBy: Int!
@@ -127,6 +128,7 @@ export const schema = gql`
     rework: Boolean
     productive: Boolean
     reason: String
+    workstation: String
     createdBy: Int!
     createdByMongoId: String
     customFields: ArtisanTaskTimesheetCustomFieldsInput
@@ -146,6 +148,7 @@ export const schema = gql`
     rework: Boolean
     productive: Boolean
     reason: String
+    workstation: String
     customFields: ArtisanTaskTimesheetCustomFieldsInput
   }
 

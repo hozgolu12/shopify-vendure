@@ -17,20 +17,7 @@ jobs:
       - name: Setup Node.js v24.8.0
         uses: actions/setup-node@v3
         with:
-          node-version: 24.8.0
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run migrations
-        run: npx vendure migrate
-
-      - name: Build Vendure app
-        run: npm run build
-
-      # Optional: Run tests when needed
-      #  name: Run tests
-      #  run: npm test
+          node-version: 24.8.0     
 
       - name: Deploy to Staging Server
         env:
@@ -42,11 +29,11 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
-            cd /home/vendure/webapps/vendure || exit 1            
-            git pull origin staging                       
-            npm install
-            npm run build
-            pm2 restart vendure-server || pm2 start ./dist/index.js --name vendure-server
-            pm2 restart vendure-worker || pm2 start ./dist/index-worker.js --name vendure-worker
+            cd /home/vendure/webapps/vendure || exit 1
+            git reset --hard HEAD
+            git pull origin staging || exit 1                       
+            npm install || exit 1
+            npx vendure migrate -g new-migration
+            pm2 restart vendure-api || pm2 start npm --name "vendure-api" -- run dev
             exit
           EOF

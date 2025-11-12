@@ -19,7 +19,7 @@ import {
 import { ProductionOrderCustomFields } from "./production-order-custom-fields.entity";
 import { TenantUser } from "../../tenant-user/entities/user.entity";
 import { Workspace } from "../../tenant-workspace/entities/tenant-workspace.entity";
-import { ProductKit } from "../../product-kit/entities/product-kit.entity";
+// import { ProductKit } from "../../product-kit/entities/product-kit.entity";
 import { ProductionOrderType, ProductionStatus } from "../types";
 
 @Entity()
@@ -61,10 +61,10 @@ export class ProductionOrder extends VendureEntity implements HasCustomFields {
   @Column({ nullable: true })
   vendureItemId: number;
 
-  // Product Kit relationship
-  @ManyToOne(() => ProductKit, { nullable: true })
-  @JoinColumn({ name: "productKitId" })
-  productKit: ProductKit;
+  // // Product Kit relationship
+  // @ManyToOne(() => ProductKit, { nullable: true })
+  // @JoinColumn({ name: "productKitId" })
+  // productKit: ProductKit;
 
   @Column({ nullable: true })
   productKitId: number;

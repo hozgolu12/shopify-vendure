@@ -97,6 +97,10 @@ export class ProductionOrderTask
   @Column("text", { nullable: true })
   remarks: string;
 
+  // Workstation
+  @Column({ nullable: true })
+  workstation: string;
+
   // Audit fields
   @CreateDateColumn()
   createdAt: Date;
